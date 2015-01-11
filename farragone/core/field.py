@@ -1,4 +1,11 @@
-from abc import abstractmethod
+"""Farragone field definitions.
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version."""
+
+import abc
 import itertools
 from collections import Counter
 from os import path as os_path
@@ -19,7 +26,7 @@ relevant for a field retrieval method."""
     NAME = lambda path: os_path.basename(path)
 
 
-class Fields:
+class Fields (metaclass=abc.ABCMeta):
     """Retrieve fields from a file (abstract base class)."""
 
     def __or__ (self, other):
@@ -27,19 +34,21 @@ class Fields:
         return FieldCombination(self, other)
 
     @property
-    @abstractmethod
+    @abc.abstractmethod
     def names (self):
         """Names of fields that could be returned by `evaluate`."""
         pass
 
-    @abstractmethod
+    @abc.abstractmethod
     def evaluate (self, paths):
         """Retrieve fields from paths.
 
-paths: iterator yielding input paths
+paths: iterator yielding input paths (absolute and with normalised separators)
 
 Returns an iterator yielding `dict`s with field names as keys and string
 values, for each path in `paths`, in the same order.
+
+When fields cannot be retrieved, they are missing from the result.
 
 """
         pass
@@ -76,7 +85,12 @@ field_sets: normalised instances from the `field_sets` argument
             raise ValueError('cannot combine field sets: duplicate names',
                              extra_names)
 
-        self.field_sets = sets
+        self._names = list(names.keys())
+        self.field_sets = sets if sets else [NoFields()]
+
+    @property
+    def names (self):
+        return self._names
 
     def evaluate (self, paths):
         path_iters = itertools.tee(paths, len(self.field_sets))
@@ -94,9 +108,45 @@ field_sets: normalised instances from the `field_sets` argument
 class NoFields (Fields):
     """Always retrieve an empty `dict` of fields."""
 
+    @property
+    def names (self):
+        return []
+
     def evaluate (self, paths):
         for path in paths:
             yield {}
+
+
+class PathComponent (Fields):
+    """Use a path component as a field.
+
+field_name: name to give the retrieved field
+index: path component index from 0, negative to index from the end
+
+Attributes:
+
+index: as passed to the constructor
+
+"""
+
+    def __init__ (self, field_name, index=-1):
+        self._name = field_name
+        self.index = int(index)
+
+    @property
+    def names (self):
+        return [self._name]
+
+    def evaluate (self, paths):
+        for path in paths:
+            # splitdrive always gives path starting with separator
+            components = os_path.splitdrive(path)[1].split(os_path.sep)[1:]
+            try:
+                component = components[self.index]
+            except IndexError:
+                yield {}
+            else:
+                yield {self._name: component}
 
 
 class RegexGroups (Fields):

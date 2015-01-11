@@ -1,11 +1,18 @@
-from abc import abstractmethod
+"""Farragone input definitions.
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version."""
+
+import abc
 from glob import iglob
 
 
-class Input:
+class Input (metaclass=abc.ABCMeta):
     """Defines a method for retrieving input paths."""
 
-    @abstractmethod
+    @abc.abstractmethod
     def __iter__ (self):
         """Iterate over the instance to get the paths."""
         pass

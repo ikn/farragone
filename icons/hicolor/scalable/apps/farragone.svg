@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="265.3147"
+   height="265.3147"
+   id="svg2"
+   version="1.1"
+   inkscape:version="0.48.5 r10040"
+   sodipodi:docname="farragone.svg">
+  <defs
+     id="defs4" />
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="1.7723771"
+     inkscape:cx="224.32396"
+     inkscape:cy="146.62105"
+     inkscape:document-units="px"
+     inkscape:current-layer="layer1"
+     showgrid="false"
+     showguides="true"
+     inkscape:window-width="1916"
+     inkscape:window-height="1057"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="0"
+     inkscape:snap-grids="true"
+     inkscape:snap-global="true"
+     showborder="false"
+     inkscape:guide-bbox="true"
+     inkscape:snap-bbox="true"
+     inkscape:snap-nodes="true"
+     inkscape:bbox-paths="true"
+     guidetolerance="20"
+     fit-margin-top="0"
+     fit-margin-left="0"
+     fit-margin-right="0"
+     fit-margin-bottom="0">
+    <inkscape:grid
+       type="xygrid"
+       id="grid12911"
+       empspacing="5"
+       visible="true"
+       enabled="true"
+       snapvisiblegridlinesonly="true"
+       spacingx="5px"
+       spacingy="5px"
+       originx="-147.37044px"
+       originy="-497.51291px" />
+    <sodipodi:guide
+       orientation="0,1"
+       position="-186.86744,166.15609"
+       id="guide12917" />
+  </sodipodi:namedview>
+  <metadata
+     id="metadata7">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title />
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(-147.37044,-289.53458)">
+    <rect
+       style="fill:#141414;fill-opacity:1;stroke:none"
+       id="rect12900"
+       width="265.3147"
+       height="265.3147"
+       x="147.37044"
+       y="289.53458"
+       rx="0.24320932"
+       ry="0.30523047" />
+    <path
+       style="fill:none;stroke:#dcdcdc;stroke-width:4.44924831px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 381.14979,390.91781 c 27.15837,0 28.16423,0 28.16423,0"
+       id="path12919"
+       inkscape:connector-curvature="0" />
+  </g>
+  <g
+     inkscape:groupmode="layer"
+     id="layer2"
+     inkscape:label="Layer"
+     transform="translate(-147.37044,-289.53458)">
+    <text
+       xml:space="preserve"
+       style="font-size:40px;font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;text-align:start;line-height:125%;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#dcdcdc;fill-opacity:1;stroke:none;font-family:DejaVu Sans Mono;-inkscape-font-specification:DejaVu Sans Mono Bold"
+       x="190.46399"
+       y="388.12677"
+       id="text12896"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         id="tspan12898"
+         x="190.46399"
+         y="388.12677">for f in </tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:40px;font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;text-align:start;line-height:125%;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#2dd22d;fill-opacity:1;stroke:none;font-family:DejaVu Sans Mono;-inkscape-font-specification:DejaVu Sans Mono Bold"
+       x="147.10124"
+       y="382.81427"
+       id="text12907"
+       sodipodi:linespacing="125%"
+       inkscape:transform-center-y="-2.9921966"><tspan
+         sodipodi:role="line"
+         id="tspan12909"
+         x="147.10124"
+         y="382.81427">$</tspan></text>
+  </g>
+</svg>

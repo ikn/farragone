@@ -1,0 +1,47 @@
+#! /usr/bin/python
+
+# This program is free software: you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free Software
+# Foundation, either version 3 of the License, or (at your option) any later
+# version.
+
+import sys
+import os
+import signal
+from platform import system
+from distutils import sysconfig
+
+_LIB_PREFIX = '/usr/local'
+sys.path.append(sysconfig.get_python_lib(prefix = _LIB_PREFIX))
+
+from farragone import core, ui
+import farragone.ui.qt.qt as qt
+
+if __name__ == '__main__':
+    # add the standard icon theme paths, since Qt doesn't seem to
+    data_dirs = os.environ.get('XDG_DATA_DIRS',
+                               '/usr/local/share/:/usr/share/')
+    qt.QIcon.setThemeSearchPaths(
+        qt.QIcon.themeSearchPaths() +
+        [os.path.expanduser(os.path.join('~', '.icons'))] +
+        [os.path.join(d, 'icons') for d in data_dirs.split(':')] +
+        # application icon for running in-place
+        [os.path.join(os.path.dirname(sys.argv[0]), 'icons')]
+    )
+    # if there's no theme name, no lookups are performed (not even in hicolor)
+    if not qt.QIcon.themeName():
+        qt.QIcon.setThemeName(ui.conf.IDENTIFIER if system() == 'Windows'
+                              else 'gnome')
+
+    app = qt.QApplication([])
+    app.setApplicationName(ui.conf.APPLICATION)
+    app.setApplicationVersion(ui.conf.VERSION)
+    app.setWindowIcon(qt.QIcon.fromTheme(ui.conf.IDENTIFIER))
+
+    # without this, the signal must go through the Python interpreter, but when
+    # using Qt the interpreter might not run very often, so nothing will happen
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
+
+    w = ui.qt.Window()
+    w.show()
+    app.exec()

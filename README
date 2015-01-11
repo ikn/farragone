@@ -1,0 +1,50 @@
+Farragone 0.1.0.
+
+A batch file renamer for programmers.
+
+http://ikn.org.uk/Farragone
+
+    LICENSE
+
+Licensed under the GNU General Public License, version 3; if this was not
+included, you can find it here:
+    http://www.gnu.org/licenses/gpl-3.0.txt
+
+    DEPENDENCIES
+
+Python 3 (>= 3.1): https://www.python.org
+xkbcommon-x11: http://xkbcommon.org
+PyQt5: http://www.riverbankcomputing.com/software/pyqt
+Qt (>= 4.7): http://qt-project.org
+
+    INSTALLATION
+
+There is no installation method on Windows.  On Unix-like OSs, with Python 3,
+bash, sed, find and make, run
+
+    ./configure
+    make
+    make install
+
+The makefile respects the `prefix', `DESTDIR', etc. arguments.  Of course,
+`make install' needs to be run as root if installing outside of your home
+directory.  To uninstall, run
+
+    make uninstall
+
+`make clean' and `make distclean' are also supported, and work as expected.
+
+    USAGE
+
+On Windows, in the source directory, run
+
+    python run
+
+where `python' is the Python 3 interpreter.
+
+On Unix-like OSs, once installed, just run `farragone' (installed to
+/usr/local/bin/ by default).  Alternatively, you can run in-place without
+installing by
+
+    ./configure
+    ./run

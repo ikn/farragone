@@ -1,0 +1,19 @@
+#! /bin/bash
+
+# fix scripts' #! lines if Python 3 is installed as python3 (then python may
+# well be Python 2)
+
+scripts=(run setup get_python_lib)
+
+if [ "$1" = reverse ]; then
+    p="/usr/bin/python"
+else
+    p=`type -p python3`
+fi
+
+if [ -n "$p" ]; then
+    for script in "${scripts[@]}"; do
+        sed -i "s:^#\!.*$:#\! $p:" "$script" || exit 1
+        echo $script
+    done
+fi

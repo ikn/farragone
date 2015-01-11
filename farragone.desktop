@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Farragone
+GenericName=Batch File Renamer
+Comment=A batch file renamer for programmers
+Icon=farragone
+Exec=farragone
+Terminal=false
+Categories=Utility;FileTools;Qt
