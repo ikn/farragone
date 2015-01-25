@@ -1,4 +1,4 @@
-Farragone 0.1.0.
+Farragone 0.1.0-next.
 
 A batch file renamer for programmers.
 
@@ -48,3 +48,9 @@ installing by
 
     ./configure
     ./run
+
+    KNOWN ISSUES
+
+When installing to a path that doesn't contain the 'hicolor' icon theme's
+'index.theme' file (often /usr/local), the window icon is not set properly.
+This is due to a bug in Qt 5 (https://bugreports.qt.io/browse/QTBUG-44107).

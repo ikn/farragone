@@ -64,12 +64,17 @@ inputs: inp.Input
 
 Attributes;
 
+started: signal emitted when we start renaming
+stopped: signal emitted when we stop renaming
 status: QLabel with current status
 running: RenameThread or None
 current_operation: (frm, to) paths for the current rename, or None
 failed: list of error strings for the current/previous run
 
 """
+
+    started = qt.pyqtSignal()
+    stopped = qt.pyqtSignal()
 
     def __init__ (self, inputs):
         qt.QHBoxLayout.__init__(self)
@@ -151,12 +156,14 @@ error: string error message
         if self.running:
             self.running = None
             self.update_status()
+            self.stopped.emit()
             self._run_btn.setEnabled(True)
 
     def run (self):
         """Perform the rename operation."""
         if not self.running:
             self._run_btn.setEnabled(False)
+            self.started.emit()
             self.running = RenameThread(self._inputs)
             self.current_operation = None
             self.failed = []

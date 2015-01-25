@@ -1,7 +1,8 @@
-0.1.1:
+0.1.0-next:
  * use the correct icon theme in more cases
- * make 'Run' button insensitive while running
- * bug: run stops working when running with duplicate field names
+ * don't allow closing the window while running
+ * make the 'Run' button insensitive while running
+ * bug: run stops working after running with duplicate field names
  * bug: fails when moving a file to itself
 
 0.1.0:
