@@ -73,12 +73,13 @@ failed: list of error strings for the current/previous run
 
     def __init__ (self, inputs):
         qt.QHBoxLayout.__init__(self)
-        self.addWidget(util.mk_button(qt.QPushButton, {
+        self._run_btn = util.mk_button(qt.QPushButton, {
             'text': '&Run',
             'icon': 'media-playback-start',
             'tooltip': 'Start the file renaming process',
             'clicked': self.run
-        }))
+        })
+        self.addWidget(self._run_btn)
         self.status = qt.QLabel()
         self.addWidget(self.status)
         self.status.setWordWrap(False)
@@ -150,10 +151,12 @@ error: string error message
         if self.running:
             self.running = None
             self.update_status()
+            self._run_btn.setEnabled(True)
 
     def run (self):
         """Perform the rename operation."""
         if not self.running:
+            self._run_btn.setEnabled(False)
             self.running = RenameThread(self._inputs)
             self.current_operation = None
             self.failed = []
