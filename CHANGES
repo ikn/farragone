@@ -2,6 +2,7 @@
  * use the correct icon theme in more cases
  * make 'Run' button insensitive while running
  * bug: run stops working when running with duplicate field names
+ * bug: fails when moving a file to itself
 
 0.1.0:
  * first release
