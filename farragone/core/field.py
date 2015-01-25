@@ -59,9 +59,9 @@ class FieldCombination (Fields):
 retrieved individually.
 
 field_sets: any number of `Fields` instances to combine
-
-Constructor throws `ValueError` if any instances in `field_sets` may generate
-fields with the same name.
+ignore_duplicate: if `False`, throw `ValueError` if any instances in
+                  `field_sets` may generate fields with the same name.  If
+                  `True`, later items in `field_sets` take precedence.
 
 Attributes:
 
@@ -69,7 +69,7 @@ field_sets: normalised instances from the `field_sets` argument
 
 """
 
-    def __init__ (self, *field_sets):
+    def __init__ (self, *field_sets, ignore_duplicate=False):
         sets = []
 
         for fields in field_sets:
@@ -80,10 +80,11 @@ field_sets: normalised instances from the `field_sets` argument
 
         names = Counter(itertools.chain.from_iterable(
             fields.names for fields in sets))
-        extra_names = +(names - Counter(set(names)))
-        if extra_names:
-            raise ValueError('cannot combine field sets: duplicate names',
-                             extra_names)
+        if not ignore_duplicate:
+            extra_names = +(names - Counter(set(names)))
+            if extra_names:
+                raise ValueError('cannot combine field sets: duplicate names',
+                                extra_names)
 
         self._names = list(names.keys())
         self.field_sets = sets if sets else [NoFields()]

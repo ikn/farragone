@@ -440,7 +440,7 @@ template: `string.Template` for the output path
 """
         inps = [f['state']['input'] for f in self.files.items]
         field_sets = (f['state']['fields'] for f in self.fields.items)
-        fields = core.field.FieldCombination(*field_sets)
+        fields = core.field.FieldCombination(*field_sets, ignore_duplicate=True)
         transform = lambda f: f
         template = self.template.template
         return (inps, fields, transform, template)
