@@ -61,7 +61,7 @@ retrieved individually.
 field_sets: any number of `Fields` instances to combine
 ignore_duplicate: if `False`, throw `ValueError` if any instances in
                   `field_sets` may generate fields with the same name.  If
-                  `True`, later items in `field_sets` take precedence.
+                  `True`, later items in `field_sets` take precedence
 
 Attributes:
 
