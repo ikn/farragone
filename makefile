@@ -10,10 +10,11 @@ bindir := $(exec_prefix)/bin
 docdir := $(datarootdir)/doc/$(IDENT)
 python_lib := $(shell ./get_python_lib "$(DESTDIR)$(prefix)")
 
-ICONS := $(wildcard icons/hicolor/*/apps/$(IDENT).png)
-ICON_PATTERN := icons/hicolor/%/apps/$(IDENT).png
-ICON_PATH = $(patsubst install-%.png,$(ICON_PATTERN),$@)
-ICON_PATH_UNINSTALL = $(patsubst uninstall-%.png,$(ICON_PATTERN),$@)
+ICON_ROOT := icons/hicolor
+ICON_DIRS := $(patsubst $(ICON_ROOT)/%/apps,%,$(wildcard $(ICON_ROOT)/*/apps))
+ICON_DIR_PATH = $(ICON_ROOT)/$(patsubst icons-install-%,%,$@)/apps
+ICON_DIR_PATH_UNINSTALL = $(ICON_ROOT)/$(patsubst icons-uninstall-%,%,$@)/apps
+ICON_PATH_UNINSTALL = $(wildcard $(ICON_DIR_PATH_UNINSTALL)/*)
 
 .PHONY: all clean distclean install uninstall
 
@@ -27,14 +28,15 @@ distclean: clean
 	@ ./configure reverse
 	find farragone -type d -name '__pycache__' | xargs $(RM) -r
 
-install-%.png:
-	mkdir -p $(shell dirname "$(DESTDIR)$(datarootdir)/$(ICON_PATH)")
-	$(INSTALL_DATA) $(ICON_PATH) $(DESTDIR)$(datarootdir)/$(ICON_PATH)
+icons-install-%:
+	mkdir -p "$(DESTDIR)$(datarootdir)/$(ICON_DIR_PATH)"
+	$(INSTALL_DATA) -t "$(DESTDIR)$(datarootdir)/$(ICON_DIR_PATH)" \
+	    $(wildcard $(ICON_DIR_PATH)/*)
 
-uninstall-%.png:
-	$(RM) $(DESTDIR)$(datarootdir)/$(ICON_PATH_UNINSTALL)
+icons-uninstall-%:
+	$(RM) $(patsubst $(ICON_DIR_PATH_UNINSTALL)/%,$(DESTDIR)$(datarootdir)/$(ICON_DIR_PATH_UNINSTALL)/%,$(ICON_PATH_UNINSTALL))
 
-install: $(patsubst $(ICON_PATTERN),install-%.png,$(ICONS))
+install: $(patsubst %,icons-install-%,$(ICON_DIRS))
 	@ # executable
 	./set_prefix "$(prefix)"
 	mkdir -p "$(DESTDIR)$(bindir)"
@@ -50,7 +52,7 @@ install: $(patsubst $(ICON_PATTERN),install-%.png,$(ICONS))
 	mkdir -p "$(DESTDIR)$(datarootdir)/applications"
 	$(INSTALL_DATA) $(IDENT).desktop "$(DESTDIR)$(datarootdir)/applications"
 
-uninstall: $(patsubst $(ICON_PATTERN),uninstall-%.png,$(ICONS))
+uninstall: $(patsubst %,icons-uninstall-%,$(ICON_DIRS))
 	@ # executable
 	$(RM) "$(DESTDIR)$(bindir)/$(IDENT)"
 	$(RM) -r "$(DESTDIR)$(datadir)"
