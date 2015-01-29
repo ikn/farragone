@@ -27,7 +27,7 @@ class Window (qt.QMainWindow):
         out = output.Output()
         def changed ():
             out.update(inputs)
-        inputs = inp.Input(changed)
+        inputs = inp.Input(self._update_tab_order, changed)
 
         runner = run.Run(inputs)
         runner.started.connect(lambda: self.lock('run'))
@@ -41,6 +41,11 @@ class Window (qt.QMainWindow):
         top.addWidget(inputs)
         top.addWidget(out)
         layout.addWidget(util.widget_from_layout(runner))
+
+        self._update_tab_order()
+
+    def _update_tab_order (self):
+        util.set_tab_order(util.natural_widget_order(self.centralWidget()))
 
     def lock (self, ident):
         # prevent the window from closing

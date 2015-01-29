@@ -14,32 +14,22 @@ from ... import core
 from . import qt, util
 
 
+class Dynamic:
+    """Has a 'new_widget' signal for when a widget is added.
+
+For widgets added outside the initialisation call, anywhere within this widget
+or layout.
+
+"""
+    new_widget = qt.pyqtSignal()
+
+
 class Changing:
-    """Manage listeners for 'change' events.
-
-Subclasses should call the `changed` attribute with no arguments to trigger
-calls to listeners.
-
-"""
-
-    def __init__ (self):
-        self._on_change = []
-
-        def changed ():
-            for f in self._on_change:
-                f()
-        self.changed = changed
-
-    def on_change (self, changed):
-        """Register a listener for changes.
-
-changed: function taking no arguments, to be called when a change occurs.
-
-"""
-        self._on_change.append(changed)
+    """Has a 'changed' signal for when user input changes."""
+    changed = qt.pyqtSignal()
 
 
-class CustomList (Changing, qt.QVBoxLayout):
+class CustomList (Dynamic, Changing, qt.QVBoxLayout):
     """User-modifiable list of items, arranged vertically.
 
 types: sequence of definitions of types of items, where the order is preserved
@@ -58,6 +48,8 @@ types: sequence of definitions of types of items, where the order is preserved
                returns a representation of the item's current state
 add_tooltip: tooltip for the button to add an item
 rm_tooltip: tooltip for the button to remove an item
+
+Emits `new_widget` signal on additions.
 
 Attributes:
 
@@ -109,7 +101,7 @@ items: sequence of current items, each a dict with keys:
             get_state = self.types[item_type].get('getstate')
             item['state'] = (None if get_state is None
                              else get_state(item['data']))
-            self.changed()
+            self.changed.emit()
 
         if item_type in self.types:
             item['data'], row = self.types[item_type]['create'](
@@ -118,6 +110,7 @@ items: sequence of current items, each a dict with keys:
             item['item'] = row
             self.items.append(item)
             changed()
+            self.new_widget.emit()
         else:
             raise ValueError(item_type)
 
@@ -127,7 +120,7 @@ items: sequence of current items, each a dict with keys:
         self.items.remove(item)
         self.removeWidget(item['item'])
         item['item'].deleteLater()
-        self.changed()
+        self.changed.emit()
 
 
 class FilesSection (CustomList):
@@ -318,7 +311,7 @@ Item states are dicts with 'fields' being a `core.field.Fields`.
         }, row)
 
 
-class FieldTransformsSection (Changing, qt.QVBoxLayout):
+class FieldTransformsSection (Dynamic, Changing, qt.QVBoxLayout):
     """UI section for defining field transformations."""
 
     ident = 'transforms'
@@ -329,16 +322,19 @@ class FieldTransformsSection (Changing, qt.QVBoxLayout):
         qt.QVBoxLayout.__init__(self)
         self._items = {}
         self._fields = fields
-        fields.on_change(self._fields_changed)
+        fields.changed.connect(self._fields_changed)
 
     def _fields_changed (self):
         current = self._fields.names()
         previous = set(self._items.keys())
-        for name in current - previous:
+        new = current - previous
+        for name in new:
             self.add(name)
         for name in previous - current:
             self.rm(name)
-        self.changed()
+        self.changed.emit()
+        if new:
+            self.new_widget.emit()
 
     def add (self, name):
         """Add a field transformation with the given name."""
@@ -378,7 +374,7 @@ template: `string.Template`
 
         def changed_text (text):
             self.template = string.Template(text)
-            self.changed()
+            self.changed.emit()
 
         text = qt.QLineEdit()
         self.addWidget(text)
@@ -399,20 +395,23 @@ template: TemplateSection
 
 """
 
-    def __init__ (self, changed):
+    def __init__ (self, new_widget, changed):
         qt.QScrollArea.__init__(self)
         self.setHorizontalScrollBarPolicy(qt.Qt.ScrollBarAlwaysOff)
         self.setWidgetResizable(True)
         self.setFrameShape(qt.QFrame.NoFrame)
 
         self.files = FilesSection()
-        self.files.on_change(changed)
+        self.files.new_widget.connect(new_widget)
+        self.files.changed.connect(changed)
         self.fields = FieldsSection()
-        self.fields.on_change(changed)
+        self.fields.new_widget.connect(new_widget)
+        self.fields.changed.connect(changed)
         #self.transforms = FieldTransformsSection(self.fields)
-        #self.transforms.on_change(changed)
+        #self.transforms.new_widget.connect(new_widget)
+        #self.transforms.changed.connect(changed)
         self.template = TemplateSection()
-        self.template.on_change(changed)
+        self.template.changed.connect(changed)
 
         self._layout = qt.QVBoxLayout()
         self.setWidget(util.widget_from_layout(self._layout))

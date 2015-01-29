@@ -9,5 +9,9 @@ IDENTIFIER = 'farragone'
 APPLICATION = 'Farragone'
 VERSION = '0.1.0'
 
+DEBUG = {
+    'qt.util.natural_widget_order': False
+}
+
 MAX_PREVIEW_LENGTH = 1000
 FALLBACK_DESKTOP = 'GNOME'
