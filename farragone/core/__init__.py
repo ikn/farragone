@@ -13,7 +13,6 @@ import shutil
 from . import inputs, field
 
 
-
 def _get_abs_path (path, cwd=None):
     """Make a path absolute.
 

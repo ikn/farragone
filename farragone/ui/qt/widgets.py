@@ -1,23 +1,15 @@
-"""Farragone Qt UI utilities.
+"""Farragone Qt UI widget utilities.
 
 This program is free software: you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free Software
 Foundation, either version 3 of the License, or (at your option) any later
 version."""
 
-import sys
 import itertools
 from collections import deque
-import os
-from multiprocessing import Pipe, Process
-from platform import system
 
-from .. import conf
+from .. import util
 from . import qt
-
-_freedesktop = system() != 'Windows'
-# contains desktop environment (if any) on freedesktop systems
-_desktop_lookup = 'XDG_CURRENT_DESKTOP'
 
 
 def widget_from_layout (layout):
@@ -72,65 +64,6 @@ items: any number of dicts defining items, with keys from Qt.ItemDataRole and
                 combobox.setItemData(i - 1, value, role)
 
 
-def get_fallback_icon_theme (local_theme, fallback_desktop):
-    """Determine a fallback icon theme for DEs Qt doesn't know about.
-
-local_theme: name of the theme to use when the system doesn't understand
-             system/user themes - probably distributed with the application
-             (path must be added manually)
-fallback_desktop: desktop environment to use to determine the fallback theme in
-                  some cases (eg. GNOME to use the user's GTK theme) (from
-                  http://standards.freedesktop.org/menu-spec/latest/apb.html)
-
-This must be called before creating the Qt application.
-
-Returns the theme name.
-
-"""
-
-    # create a Qt application in a separate process to determine the fallback
-    # theme - comes from DE-specific config files
-    def get_fallback_theme (pipe):
-        os.environ[_desktop_lookup] = fallback_desktop
-        app = qt.QApplication([])
-        pipe.send(qt.QIcon.themeName())
-
-    if not _freedesktop:
-        fallback_theme = local_theme
-    elif os.environ.get(_desktop_lookup):
-        fallback_theme = None
-    else:
-        # must do this before creating an application in the main process
-        pipe_out, pipe_in = Pipe(duplex=False)
-        p = Process(target=get_fallback_theme, args=(pipe_in,))
-        p.start()
-        p.join()
-        fallback_theme = pipe_out.recv()
-    return fallback_theme
-
-
-def apply_fallback_icon_theme (fallback_theme):
-    """Apply a fallback icon theme if necessary.
-
-fallback_theme: theme name (probably from `get_fallback_icon_theme`)
-
-This must be called after creating the Qt application.
-
-"""
-
-    def bad_icon_theme (name):
-        # if there's no theme name, no lookups are performed
-        # hicolor is missing important icons
-        return name is None or name == 'hicolor'
-
-    current_theme = qt.QIcon.themeName()
-    if bad_icon_theme(current_theme):
-        if bad_icon_theme(fallback_theme):
-            print('warning: no suitable icon theme found', file=sys.stderr)
-        else:
-            qt.QIcon.setThemeName(fallback_theme)
-
-
 def _natural_layout_items_order (layout):
     """Return widgets in a layout in order, or None if of unknown type."""
     if isinstance(layout, qt.QBoxLayout):
@@ -164,6 +97,7 @@ def _natural_widget_widgets_order (widget):
         return None
 
 
+_natural_widget_order_log = util.logger('qt.widgets.natural_widget_order')
 def natural_widget_order (*widgets):
     """Return widgets from the given widgets in a natural order.
 
@@ -173,7 +107,7 @@ Returns an iterator over bottom-level widgets, going through known layouts and
 other widget containers.
 
 """
-    dbg = conf.DEBUG['qt.util.natural_widget_order']
+    log = _natural_widget_order_log
     # contains widgets and layouts
     remain = deque(widgets)
     while remain:
@@ -184,7 +118,7 @@ other widget containers.
             if sub_widgets is None:
                 layout = item.layout()
             else:
-                if dbg: print('WW', item, '/', sub_widgets)
+                log('WW', item, '/', sub_widgets)
                 remain.extendleft(reversed(sub_widgets))
                 # don't check layout
                 continue
@@ -194,7 +128,7 @@ other widget containers.
 
         if layout_items is None:
             if is_widget:
-                if dbg: print('W', item)
+                log('W', item)
                 yield item
         else:
             for layout_item in reversed(layout_items):
@@ -203,10 +137,10 @@ other widget containers.
                 if widget is None:
                     sub_layout = layout_item.layout()
                     if sub_layout is not None:
-                        if dbg: print('WLL', item, '/', layout, '/', sub_layout)
+                        log('WLL', item, '/', layout, '/', sub_layout)
                         remain.appendleft(sub_layout)
                 else:
-                    if dbg: print('WLW', item, '/', layout, '/', widget)
+                    log('WLW', item, '/', layout, '/', widget)
                     remain.appendleft(widget)
 
 

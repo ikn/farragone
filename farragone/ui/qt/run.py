@@ -8,7 +8,7 @@ version."""
 from html import escape
 
 from ... import core
-from . import qt, util
+from . import qt, widgets
 
 
 class RenameThreadSignals (qt.QObject):
@@ -78,7 +78,7 @@ failed: list of error strings for the current/previous run
 
     def __init__ (self, inputs):
         qt.QHBoxLayout.__init__(self)
-        self._run_btn = util.mk_button(qt.QPushButton, {
+        self._run_btn = widgets.mk_button(qt.QPushButton, {
             'text': '&Run',
             'icon': 'media-playback-start',
             'tooltip': 'Start the file renaming process',

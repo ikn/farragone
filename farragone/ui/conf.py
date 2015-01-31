@@ -7,11 +7,16 @@ version."""
 
 IDENTIFIER = 'farragone'
 APPLICATION = 'Farragone'
-VERSION = '0.1.0'
+VERSION = '0.1.0-next'
 
-DEBUG = {
-    'qt.util.natural_widget_order': False
+LOG = {
+    'qt.widgets.natural_widget_order': False,
+    'qt.output:preview': False
 }
 
-MAX_PREVIEW_LENGTH = 1000
+# minumum interval between Qt signals for potentially rapid emitters
+MIN_SIGNAL_INTERVAL = 0.2
+# maximum number of renames shown in the preview
+MAX_PREVIEW_LENGTH = 500
+# used to find an icon theme
 FALLBACK_DESKTOP = 'GNOME'

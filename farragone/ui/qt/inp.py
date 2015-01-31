@@ -11,7 +11,7 @@ import locale
 from html import escape
 
 from ... import core
-from . import qt, util
+from . import qt, widgets
 
 
 class Dynamic:
@@ -66,11 +66,11 @@ items: sequence of current items, each a dict with keys:
         Changing.__init__(self)
         qt.QVBoxLayout.__init__(self)
         new = qt.QHBoxLayout()
-        self.addWidget(util.widget_from_layout(new))
+        self.addWidget(widgets.widget_from_layout(new))
 
         new_type = qt.QComboBox()
         new.addWidget(new_type)
-        util.add_combobox_items(new_type, *(
+        widgets.add_combobox_items(new_type, *(
             {
                 None: data['id'],
                 qt.Qt.DisplayRole: data['name'],
@@ -78,7 +78,7 @@ items: sequence of current items, each a dict with keys:
             } for data in types
         ))
 
-        new.addWidget(util.mk_button(qt.QPushButton, {
+        new.addWidget(widgets.mk_button(qt.QPushButton, {
             'icon': 'list-add',
             'tooltip': add_tooltip,
             'clicked': lambda: self.add(new_type.currentData())
@@ -91,7 +91,7 @@ items: sequence of current items, each a dict with keys:
     def add (self, item_type):
         """Add an item of the given type (`id`)."""
         item = {'type': item_type}
-        rm_btn = util.mk_button(qt.QPushButton, {
+        rm_btn = widgets.mk_button(qt.QPushButton, {
             'icon': 'list-remove',
             'tooltip': self._rm_tooltip,
             'clicked': lambda: self.rm(item)
@@ -157,7 +157,7 @@ Item states are dicts with 'input' being a `core.inputs.Input`.
 
     def _new_list (self, rm_btn, changed):
         layout = qt.QHBoxLayout()
-        row = util.widget_from_layout(layout)
+        row = widgets.widget_from_layout(layout)
 
         text = qt.QPlainTextEdit()
         layout.addWidget(text)
@@ -177,7 +177,7 @@ Item states are dicts with 'input' being a `core.inputs.Input`.
 
     def _new_glob (self, rm_btn, changed):
         layout = qt.QHBoxLayout()
-        row = util.widget_from_layout(layout)
+        row = widgets.widget_from_layout(layout)
 
         text = qt.QLineEdit()
         layout.addWidget(text)
@@ -237,7 +237,7 @@ Item states are dicts with 'fields' being a `core.field.Fields`.
 
     def _new_component (self, rm_btn, changed):
         layout = qt.QHBoxLayout()
-        row = util.widget_from_layout(layout)
+        row = widgets.widget_from_layout(layout)
 
         idx = qt.QLineEdit()
         layout.addWidget(idx)
@@ -265,7 +265,7 @@ Item states are dicts with 'fields' being a `core.field.Fields`.
 
     def _new_regex (self, rm_btn, changed):
         layout = qt.QHBoxLayout()
-        row = util.widget_from_layout(layout)
+        row = widgets.widget_from_layout(layout)
 
         text = qt.QLineEdit()
         layout.addWidget(text)
@@ -287,7 +287,7 @@ Item states are dicts with 'fields' being a `core.field.Fields`.
 
     def _new_ordering (self, rm_btn, changed):
         layout = qt.QGridLayout()
-        row = util.widget_from_layout(layout)
+        row = widgets.widget_from_layout(layout)
 
         case_sensitive = qt.QCheckBox('Case-sensitive')
         layout.addWidget(case_sensitive, 0, 0)
@@ -345,7 +345,7 @@ class FieldTransformsSection (Dynamic, Changing, qt.QVBoxLayout):
         text.setPlaceholderText('Python 3 code transform')
         text.textChanged.connect(self.changed)
 
-        row = util.widget_from_layout(layout)
+        row = widgets.widget_from_layout(layout)
         self.addWidget(row)
         self._items[name] = row
 
@@ -414,7 +414,7 @@ template: TemplateSection
         self.template.changed.connect(changed)
 
         self._layout = qt.QVBoxLayout()
-        self.setWidget(util.widget_from_layout(self._layout))
+        self.setWidget(widgets.widget_from_layout(self._layout))
         self._layout.setSizeConstraint(qt.QLayout.SetMinAndMaxSize)
         self.add_section(self.files)
         self.add_section(self.fields)

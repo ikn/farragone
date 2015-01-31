@@ -6,36 +6,11 @@
 # version.
 
 import sys
-import os
-import signal
 from distutils import sysconfig
 
 _LIB_PREFIX = '/usr/local'
 sys.path.append(sysconfig.get_python_lib(prefix = _LIB_PREFIX))
 
-from farragone import core, ui
-import farragone.ui.qt.qt as qt
-
 if __name__ == '__main__':
-    fallback_theme = ui.qt.util.get_fallback_icon_theme(ui.conf.APPLICATION,
-                                                        ui.conf.FALLBACK_DESKTOP)
-    app = qt.QApplication([])
-    ui.qt.util.apply_fallback_icon_theme(fallback_theme)
-
-    # add icon theme path for application icon for running in-place
-    qt.QIcon.setThemeSearchPaths(
-        qt.QIcon.themeSearchPaths() +
-        [os.path.join(os.path.dirname(sys.argv[0]), 'icons')]
-    )
-
-    app.setApplicationName(ui.conf.APPLICATION)
-    app.setApplicationVersion(ui.conf.VERSION)
-    app.setWindowIcon(qt.QIcon.fromTheme(ui.conf.IDENTIFIER))
-
-    # without this, the signal must go through the Python interpreter, but when
-    # using Qt the interpreter might not run very often, so nothing will happen
-    signal.signal(signal.SIGINT, signal.SIG_DFL)
-
-    w = ui.qt.Window()
-    w.show()
-    app.exec()
+    import farragone.ui.qt as qt
+    qt.init()

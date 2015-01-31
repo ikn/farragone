@@ -15,7 +15,7 @@ included, you can find it here:
 Python 3 (>= 3.1): https://www.python.org
 xkbcommon-x11: http://xkbcommon.org
 PyQt5: http://www.riverbankcomputing.com/software/pyqt
-Qt (>= 4.7): http://qt-project.org
+Qt (>= 5.2): http://qt-project.org
 
     INSTALLATION
 

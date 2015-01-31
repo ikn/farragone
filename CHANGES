@@ -1,4 +1,5 @@
 0.1.0-next:
+ * improve UI responsiveness while computing previewing
  * use the correct icon theme in more cases
  * don't allow closing the window while running
  * make the 'Run' button insensitive while running
