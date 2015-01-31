@@ -35,6 +35,36 @@ class DestinationExistsError (OSError):
         OSError.__init__(self, 'destination exists: {}'.format(repr(dest)))
 
 
+def _ensure_dir_exists (path):
+    """Create a directory and all missing intermediate directories.
+
+Returns a sequence of the paths that were created, deepest first.
+
+"""
+    create = []
+    while True:
+        try:
+            os.mkdir(path)
+        except FileExistsError:
+            # no need to create
+            break
+        except OSError as e:
+            if e.errno == 2:
+                # 'no such file or directory': need to create parent first
+                create.append(path)
+                path = os_path.dirname(path)
+            else:
+                raise
+        else:
+            # succeeded, so there's no need to look at parents
+            # create children we failed to create before
+            for child in reversed(create):
+                os.mkdir(child)
+            create.append(path)
+            break
+    return create
+
+
 def _rename_cross_device (frm, to):
     """Rename a file across mount points."""
     try:
@@ -47,6 +77,18 @@ def _rename_cross_device (frm, to):
         except OSError:
             pass
         raise
+
+
+def _rename (frm, to):
+    """Actually rename a file."""
+    try:
+        os.rename(frm, to)
+    except OSError as e:
+        if e.errno == 18:
+            # 'invalid cross-device link': copy then delete
+            _rename_cross_device(frm, to)
+        else:
+            raise
 
 
 def rename (frm, to):
@@ -68,15 +110,17 @@ Raises OSError.
     elif os_path.exists(to):
         raise DestinationExistsError(to)
     else:
+        created = _ensure_dir_exists(os_path.dirname(to))
         try:
-            os.makedirs(os_path.dirname(to), exist_ok=True)
-            os.rename(frm, to)
-        except OSError as e:
-            if e.errno == 18:
-                # 'invalid cross-device link': copy then delete
-                _rename_cross_device(frm, to)
-            else:
-                raise
+            _rename(frm, to)
+        except OSError:
+            # remove created directories
+            try:
+                for path in created:
+                    os.rmdir(path)
+            except OSError:
+                pass
+            raise
 
 
 def get_renames (inps, fields, template, fields_transform=lambda f: f,

@@ -4,6 +4,7 @@
  * don't allow closing the window while running
  * make the 'Run' button insensitive while running
  * update the preview after running
+ * remove created directories when rolling back a failed rename
  * bug: run stops working after running with duplicate field names
  * bug: fails when moving a file to itself
  * bug: incorrect tab order for dynamic widgets
