@@ -33,7 +33,7 @@ class Window (qt.QMainWindow):
 
         runner = run.Run(inputs)
         runner.started.connect(lambda: self.lock('run'))
-        runner.stopped.connect(lambda: self.release('run'))
+        runner.stopped.connect(self._run_stopped)
 
         layout = qt.QVBoxLayout()
         self.setCentralWidget(widgets.widget_from_layout(layout))
@@ -57,6 +57,10 @@ class Window (qt.QMainWindow):
     def release (self, ident):
         # release a close prevention lock
         self._locked[ident] -= 1
+
+    def _run_stopped (self):
+        self.release('run')
+        self.output.update()
 
     def closeEvent (self, evt):
         try:
