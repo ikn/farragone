@@ -3,6 +3,7 @@
  * use the correct icon theme in more cases
  * don't allow closing the window while running
  * make the 'Run' button insensitive while running
+ * headings for added file and field sources
  * update the preview after running
  * remove created directories when rolling back a failed rename
  * bug: run stops working after running with duplicate field names

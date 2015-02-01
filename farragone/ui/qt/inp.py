@@ -37,13 +37,12 @@ types: sequence of definitions of types of items, where the order is preserved
     id: unique identifier
     name: displayed name
     description: short description
-    create: function called like `create(rm_btn, changed) -> (data, item)` to
+    create: function called like `create(changed) -> (data, item)` to
             create an item of this type
-        rm_btn: QPushButton which removes the item from the list
         changed: function to call with no arguments when any of the form fields
                  in the item change
         data: passed to `get_state`
-        item: the created item (QWidget)
+        item: the created item (QWidget or QLayout)
     get_state: optional function called with `data` returned by `create` which
                returns a representation of the item's current state
 add_tooltip: tooltip for the button to add an item
@@ -90,7 +89,10 @@ items: sequence of current items, each a dict with keys:
 
     def add (self, item_type):
         """Add an item of the given type (`id`)."""
-        item = {'type': item_type}
+        if item_type not in self.types:
+            raise ValueError(item_type)
+        item = None
+
         rm_btn = widgets.mk_button(qt.QPushButton, {
             'icon': 'list-remove',
             'tooltip': self._rm_tooltip,
@@ -103,16 +105,33 @@ items: sequence of current items, each a dict with keys:
                              else get_state(item['data']))
             self.changed.emit()
 
-        if item_type in self.types:
-            item['data'], row = self.types[item_type]['create'](
-                rm_btn, changed)
-            self.insertWidget(len(self.items), row)
-            item['item'] = row
-            self.items.append(item)
-            changed()
-            self.new_widget.emit()
-        else:
-            raise ValueError(item_type)
+        defn = self.types[item_type]
+        header = qt.QLabel()
+        header.setTextFormat(qt.Qt.RichText)
+        header.setText('<b>{}</b>'.format(escape(defn['name'])))
+        header.setToolTip(defn['description'])
+        header.setContentsMargins(5, 5, 5, 5)
+        data, controls = defn['create'](changed)
+
+        layout = qt.QGridLayout()
+        layout.setColumnStretch(0, 1)
+        layout.addWidget(header, 0, 0)
+        (layout.addLayout if isinstance(controls, qt.QLayout)
+         else layout.addWidget)(controls, 1, 0, 1, 2, qt.Qt.AlignTop)
+        layout.addWidget(rm_btn, 0, 1)
+        widget = widgets.widget_from_layout(layout)
+        self.insertWidget(len(self.items), widget)
+
+        item = {
+            'type': item_type,
+            'data': data,
+            'header': header,
+            'item': widget
+        }
+
+        self.items.append(item)
+        changed()
+        self.new_widget.emit()
 
 
     def rm (self, item):
@@ -155,37 +174,26 @@ Item states are dicts with 'input' being a `core.inputs.Input`.
                        data['text_widget'].toPlainText().splitlines())
         return {'input': core.inputs.StaticInput(*paths)}
 
-    def _new_list (self, rm_btn, changed):
-        layout = qt.QHBoxLayout()
-        row = widgets.widget_from_layout(layout)
-
+    def _new_list (self, changed):
         text = qt.QPlainTextEdit()
-        layout.addWidget(text)
         text.setLineWrapMode(qt.QPlainTextEdit.NoWrap)
-        # QPlainTextEdit.setPlaceholderText is new in PyQt5 5.3
+        # QPlainTextEdit.setPlaceholderText is new in Qt 5.3
         try:
             text.setPlaceholderText('List of files, one per line')
         except AttributeError:
             pass
         text.textChanged.connect(changed)
-        layout.addWidget(rm_btn, alignment=qt.Qt.AlignTop)
-
-        return ({'text_widget': text}, row)
+        return ({'text_widget': text}, text)
 
     def _get_glob_state (self, data):
         return {'input': core.inputs.GlobInput(data['text_widget'].text())}
 
-    def _new_glob (self, rm_btn, changed):
-        layout = qt.QHBoxLayout()
-        row = widgets.widget_from_layout(layout)
-
+    def _new_glob (self, changed):
         text = qt.QLineEdit()
-        layout.addWidget(text)
         text.setPlaceholderText('Glob-style pattern')
+        text.setText('*.ext')
         text.textChanged.connect(changed)
-        layout.addWidget(rm_btn)
-
-        return ({'text_widget': text}, row)
+        return ({'text_widget': text}, text)
 
 
 class FieldsSection (CustomList):
@@ -235,9 +243,8 @@ Item states are dicts with 'fields' being a `core.field.Fields`.
             fields = core.field.PathComponent(field_name)
         return {'fields': fields}
 
-    def _new_component (self, rm_btn, changed):
+    def _new_component (self, changed):
         layout = qt.QHBoxLayout()
-        row = widgets.widget_from_layout(layout)
 
         idx = qt.QLineEdit()
         layout.addWidget(idx)
@@ -247,14 +254,13 @@ Item states are dicts with 'fields' being a `core.field.Fields`.
         field = qt.QLineEdit()
         layout.addWidget(field)
         field.setText('name')
-        field.setPlaceholderText('Path component field name')
+        field.setPlaceholderText('Field name')
         field.textChanged.connect(changed)
-        layout.addWidget(rm_btn)
 
         return ({
             'index_widget': idx,
             'field_widget': field
-        }, row)
+        }, layout)
 
     def _get_regex_state (self, data):
         try:
@@ -263,17 +269,11 @@ Item states are dicts with 'fields' being a `core.field.Fields`.
             regex = re.compile('')
         return {'fields': core.field.RegexGroups(regex)}
 
-    def _new_regex (self, rm_btn, changed):
-        layout = qt.QHBoxLayout()
-        row = widgets.widget_from_layout(layout)
-
+    def _new_regex (self, changed):
         text = qt.QLineEdit()
-        layout.addWidget(text)
-        text.setPlaceholderText('Regular expression')
+        text.setText('(?P<group>.*)')
         text.textChanged.connect(changed)
-        layout.addWidget(rm_btn)
-
-        return ({'text_widget': text}, row)
+        return ({'text_widget': text}, text)
 
     def _get_ordering_state (self, data):
         field_name = data['field_widget'].text()
@@ -285,9 +285,8 @@ Item states are dicts with 'fields' being a `core.field.Fields`.
         reverse = not data['ascending_widget'].isChecked()
         return {'fields': core.field.Ordering(field_name, key, reverse)}
 
-    def _new_ordering (self, rm_btn, changed):
+    def _new_ordering (self, changed):
         layout = qt.QGridLayout()
-        row = widgets.widget_from_layout(layout)
 
         case_sensitive = qt.QCheckBox('Case-sensitive')
         layout.addWidget(case_sensitive, 0, 0)
@@ -296,19 +295,18 @@ Item states are dicts with 'fields' being a `core.field.Fields`.
         layout.addWidget(ascending, 0, 1)
         ascending.setChecked(True)
         ascending.stateChanged.connect(changed)
-        layout.addWidget(rm_btn, 0, 2)
 
         field = qt.QLineEdit()
         layout.addWidget(field, 1, 0, 1, 2)
         field.setText('position')
-        field.setPlaceholderText('Ordering field name')
+        field.setPlaceholderText('Field name')
         field.textChanged.connect(changed)
 
         return ({
             'field_widget': field,
             'casesensitive_widget': case_sensitive,
             'ascending_widget': ascending
-        }, row)
+        }, layout)
 
 
 class FieldTransformsSection (Dynamic, Changing, qt.QVBoxLayout):
