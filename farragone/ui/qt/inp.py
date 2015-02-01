@@ -11,6 +11,7 @@ import locale
 from html import escape
 
 from ... import core
+from .. import util
 from . import qt, widgets
 
 
@@ -66,24 +67,21 @@ items: sequence of current items, each a dict with keys:
     def __init__ (self, types, add_tooltip, rm_tooltip):
         Changing.__init__(self)
         qt.QVBoxLayout.__init__(self)
-        new = qt.QHBoxLayout()
-        self.addWidget(widgets.widget_from_layout(new))
 
         new_type = qt.QComboBox()
-        new.addWidget(new_type)
+        self.addWidget(new_type)
+        # https://bugreports.qt.io/browse/QTBUG-40807
+        add_type = lambda i: self.add(new_type.itemData(i))
+        new_type.activated.connect(util.rate_limit(0.1, add_type))
+
         widgets.add_combobox_items(new_type, *(
             {
-                None: data['id'],
+                'icon': 'list-add',
+                qt.Qt.UserRole: data['id'],
                 qt.Qt.DisplayRole: data['name'],
                 qt.Qt.ToolTipRole: data['description']
             } for data in types
         ))
-
-        new.addWidget(widgets.mk_button(qt.QPushButton, {
-            'icon': 'list-add',
-            'tooltip': add_tooltip,
-            'clicked': lambda: self.add(new_type.currentData())
-        }))
 
         self.types = {data['id']: data for data in types}
         self._rm_tooltip = rm_tooltip
@@ -108,10 +106,8 @@ items: sequence of current items, each a dict with keys:
             self.changed.emit()
 
         defn = self.types[item_type]
-        header = qt.QLabel()
-        header.setTextFormat(qt.Qt.RichText)
-        header.setText('<b>{}</b>'.format(escape(defn['name'])))
-        header.setToolTip(defn['description'])
+        header = widgets.mk_label('<b>{}</b>'.format(escape(defn['name'])),
+                                  rich=True, tooltip=defn['description'])
         header.setContentsMargins(5, 5, 5, 5)
         result = defn['create'](changed)
         controls = result['item']
@@ -355,7 +351,7 @@ class FieldTransformsSection (Dynamic, Changing, qt.QVBoxLayout):
     def add (self, name):
         """Add a field transformation with the given name."""
         layout = qt.QHBoxLayout()
-        layout.addWidget(qt.QLabel(name))
+        layout.addWidget(widgets.mk_label(name))
         text = qt.QLineEdit()
         layout.addWidget(text)
         text.setPlaceholderText('Python 3 code transform')

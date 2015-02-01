@@ -52,25 +52,40 @@ defn: dict with optional keys:
     return b
 
 
+def mk_label (text, rich=False, tooltip=None):
+    """Create a QLabel.
+
+text: label text
+rich: whether to render as rich text (otherwise ignore markup)
+tooltip: tooltip text
+
+"""
+    label = qt.QLabel()
+    label.setTextFormat(qt.Qt.RichText if rich else qt.Qt.PlainText)
+    label.setText(text)
+    if tooltip is not None:
+        label.setToolTip(tooltip)
+    return label
+
+
 def add_combobox_items (combobox, *items):
     """Add text items to a QComboBox.
 
 combobox: QComboBox
 items: any number of dicts defining items, with keys from Qt.ItemDataRole and
-       values the associated data, plus a special (optional) `None` key giving
-       generic data for the item (retrieved by QComboBox.currentData())
+       values the associated data, plus a special (optional) 'icon' key giving
+       the name of the icon to show
 
 """
     for data in items:
-        generic_data = data.get(None)
-        if generic_data is None:
-            combobox.addItem('')
+        if 'icon' in data:
+            combobox.addItem(qt.QIcon.fromTheme(data['icon']), '')
         else:
-            combobox.addItem('', generic_data)
+            combobox.addItem('')
 
         i = combobox.count()
         for role, value in data.items():
-            if role is not None:
+            if role != 'icon':
                 combobox.setItemData(i - 1, value, role)
 
 

@@ -85,7 +85,7 @@ failed: list of error strings for the current/previous run
             'clicked': self.run
         })
         self.addWidget(self._run_btn)
-        self.status = qt.QLabel()
+        self.status = widgets.mk_label('', rich=True)
         self.addWidget(self.status)
         self.status.setWordWrap(False)
 
