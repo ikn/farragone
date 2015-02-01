@@ -1,4 +1,4 @@
-0.1.0-next:
+0.1.1:
  * improve UI responsiveness while computing previewing
  * use the correct icon theme in more cases
  * don't allow closing the window while running

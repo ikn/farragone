@@ -7,7 +7,7 @@ version."""
 
 IDENTIFIER = 'farragone'
 APPLICATION = 'Farragone'
-VERSION = '0.1.0-next'
+VERSION = '0.1.1'
 
 LOG = {
     'qt.widgets.natural_widget_order': False,
