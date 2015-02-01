@@ -21,6 +21,7 @@ cwd: directory that `path` is relative to (default: Python process's current
      working directory)
 
 """
+    path = os_path.expanduser(path)
     abs_path = os_path.abspath(path)
     return (
         os_path.normpath(os_path.join(cwd, path))
@@ -97,15 +98,15 @@ def rename (frm, to):
 frm: current path
 to: destination path
 
-`frm` and `to` must be absolute paths.
+`frm` and `to` must be absolute, normalised paths.
 
 Raises OSError.
 
 """
-    frm = os_path.realpath(os_path.normcase(frm))
-    to = os_path.realpath(os_path.normcase(to))
+    frm = os_path.realpath(frm)
+    to = os_path.realpath(to)
 
-    if frm == to:
+    if os_path.normcase(frm) == os_path.normcase(to):
         pass
     elif os_path.exists(to):
         raise DestinationExistsError(to)

@@ -6,6 +6,7 @@ Foundation, either version 3 of the License, or (at your option) any later
 version."""
 
 import abc
+from os import path as os_path
 from glob import iglob
 
 
@@ -47,7 +48,7 @@ pattern: as passed to the constructor
 
 """
     def __init__ (self, pattern):
-        self.pattern = pattern
+        self.pattern = os_path.expanduser(pattern)
 
     def __iter__ (self):
         return iglob(self.pattern)
