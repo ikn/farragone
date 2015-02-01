@@ -37,12 +37,14 @@ types: sequence of definitions of types of items, where the order is preserved
     id: unique identifier
     name: displayed name
     description: short description
-    create: function called like `create(changed) -> (data, item)` to
-            create an item of this type
-        changed: function to call with no arguments when any of the form fields
-                 in the item change
-        data: passed to `get_state`
-        item: the created item (QWidget or QLayout)
+    create: function called like
+        `create(changed) -> {'data': data, 'item': item[, 'focus': focus] }` to
+        create an item of this type
+            changed: function to call with no arguments when any of the form
+                     fields in the item change
+            data: passed to `get_state`
+            item: the created item (QWidget or QLayout)
+            focus: widget to focus when added (default: `item`)
     get_state: optional function called with `data` returned by `create` which
                returns a representation of the item's current state
 add_tooltip: tooltip for the button to add an item
@@ -111,7 +113,8 @@ items: sequence of current items, each a dict with keys:
         header.setText('<b>{}</b>'.format(escape(defn['name'])))
         header.setToolTip(defn['description'])
         header.setContentsMargins(5, 5, 5, 5)
-        data, controls = defn['create'](changed)
+        result = defn['create'](changed)
+        controls = result['item']
 
         layout = qt.QGridLayout()
         layout.setColumnStretch(0, 1)
@@ -122,9 +125,24 @@ items: sequence of current items, each a dict with keys:
         widget = widgets.widget_from_layout(layout)
         self.insertWidget(len(self.items), widget)
 
+        # focus specific widget, or the main one, or any we can find
+        focus = result.get('focus')
+        if isinstance(focus, qt.QWidget):
+            pass
+        elif isinstance(controls, qt.QWidget):
+            focus = controls
+        else:
+            focus = widgets.first_layout_widget(controls)
+        if focus is not None:
+            focus.setFocus(qt.Qt.OtherFocusReason)
+            # for text boxes, also select all text
+            if isinstance(focus,
+                          (qt.QLineEdit, qt.QTextEdit, qt.QPlainTextEdit)):
+                focus.selectAll()
+
         item = {
             'type': item_type,
-            'data': data,
+            'data': result['data'],
             'header': header,
             'item': widget
         }
@@ -183,7 +201,7 @@ Item states are dicts with 'input' being a `core.inputs.Input`.
         except AttributeError:
             pass
         text.textChanged.connect(changed)
-        return ({'text_widget': text}, text)
+        return {'data': {'text_widget': text}, 'item': text}
 
     def _get_glob_state (self, data):
         return {'input': core.inputs.GlobInput(data['text_widget'].text())}
@@ -193,7 +211,7 @@ Item states are dicts with 'input' being a `core.inputs.Input`.
         text.setPlaceholderText('Glob-style pattern')
         text.setText('*.ext')
         text.textChanged.connect(changed)
-        return ({'text_widget': text}, text)
+        return {'data': {'text_widget': text}, 'item': text}
 
 
 class FieldsSection (CustomList):
@@ -257,10 +275,10 @@ Item states are dicts with 'fields' being a `core.field.Fields`.
         field.setPlaceholderText('Field name')
         field.textChanged.connect(changed)
 
-        return ({
+        return {'data': {
             'index_widget': idx,
             'field_widget': field
-        }, layout)
+        }, 'item': layout, 'focus': idx}
 
     def _get_regex_state (self, data):
         try:
@@ -273,7 +291,7 @@ Item states are dicts with 'fields' being a `core.field.Fields`.
         text = qt.QLineEdit()
         text.setText('(?P<group>.*)')
         text.textChanged.connect(changed)
-        return ({'text_widget': text}, text)
+        return {'data': {'text_widget': text}, 'item': text}
 
     def _get_ordering_state (self, data):
         field_name = data['field_widget'].text()
@@ -302,11 +320,11 @@ Item states are dicts with 'fields' being a `core.field.Fields`.
         field.setPlaceholderText('Field name')
         field.textChanged.connect(changed)
 
-        return ({
+        return {'data': {
             'field_widget': field,
             'casesensitive_widget': case_sensitive,
             'ascending_widget': ascending
-        }, layout)
+        }, 'item': layout, 'focus': field}
 
 
 class FieldTransformsSection (Dynamic, Changing, qt.QVBoxLayout):

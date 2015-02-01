@@ -19,6 +19,16 @@ def widget_from_layout (layout):
     return w
 
 
+def first_layout_widget (layout):
+    """Return the first widget in a QLayout, or None."""
+    for i in range(layout.count()):
+        item = layout.itemAt(0)
+        if isinstance(item, qt.QWidgetItem):
+            return item.widget()
+    else:
+        return None
+
+
 def mk_button (cls, defn):
     """Create a QAbstractButton.
 
