@@ -8,7 +8,12 @@ version."""
 import sys
 from time import time
 
-from . import conf
+from .. import ui
+
+
+def warn (*args):
+    """Print a general warning log."""
+    print('warning:', *args, file=sys.stderr)
 
 
 def logger (name):
@@ -17,7 +22,7 @@ def logger (name):
 name: corresponds to `conf.LOG` keys
 
 """
-    enabled = conf.LOG.get(name, False)
+    enabled = ui.conf.LOG.get(name, False)
     prefix = '[{}]'.format(name)
 
     def log (*args):

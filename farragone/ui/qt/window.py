@@ -8,6 +8,7 @@ version."""
 from collections import Counter
 
 from .. import conf
+settings = conf.settings
 from . import qt, widgets, inp, output, run
 
 _lock_messages = {
@@ -15,11 +16,11 @@ _lock_messages = {
 }
 
 
-class Window (qt.QMainWindow):
+class Window (widgets.Window):
     """Main application window."""
 
     def __init__ (self):
-        qt.QMainWindow.__init__(self)
+        widgets.Window.__init__(self, 'main')
         self.setWindowTitle(conf.APPLICATION)
         # reasons for which this window cannot be closed
         self._locked = Counter()
@@ -37,11 +38,17 @@ class Window (qt.QMainWindow):
 
         layout = qt.QVBoxLayout()
         self.setCentralWidget(widgets.widget_from_layout(layout))
+
         top = qt.QSplitter(qt.Qt.Horizontal)
         top.setChildrenCollapsible(False)
         layout.addWidget(top, 1)
         top.addWidget(inputs)
         top.addWidget(out)
+        ratio = int(100 * settings['splitter_ratio_main'])
+        top.setStretchFactor(0, ratio)
+        top.setStretchFactor(1, 100 - ratio)
+        top.splitterMoved.connect(lambda: self._splitter_moved(top))
+
         layout.addWidget(widgets.widget_from_layout(runner))
 
         self._update_tab_order()
@@ -49,6 +56,11 @@ class Window (qt.QMainWindow):
     def _update_tab_order (self):
         widgets.set_tab_order(
             widgets.natural_widget_order(self.centralWidget()))
+
+    def _splitter_moved (self, splitter):
+        # save main splitter ratio on change
+        x, y = splitter.sizes()
+        settings['splitter_ratio_main'] = x / (x + y)
 
     def lock (self, ident):
         # prevent the window from closing

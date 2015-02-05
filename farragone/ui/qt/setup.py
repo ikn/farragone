@@ -11,7 +11,7 @@ import signal
 from platform import system
 from multiprocessing import Pipe, Process
 
-from .. import conf
+from .. import conf, util
 from . import qt, window
 
 _freedesktop = system() != 'Windows'
@@ -73,7 +73,7 @@ This must be called after creating the Qt application.
     current_theme = qt.QIcon.themeName()
     if bad_icon_theme(current_theme):
         if bad_icon_theme(fallback_theme):
-            print('warning: no suitable icon theme found', file=sys.stderr)
+            util.warn('no suitable icon theme found')
         else:
             qt.QIcon.setThemeName(fallback_theme)
 

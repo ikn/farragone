@@ -9,6 +9,7 @@ import itertools
 from collections import deque
 
 from .. import util
+from ..conf import settings
 from . import qt
 
 
@@ -180,3 +181,37 @@ widgets: iterable of widgets
     next(ws2)
     for w1, w2 in zip(ws1, ws2):
         qt.QWidget.setTabOrder(w1, w2)
+
+
+class Window (qt.QMainWindow):
+    """A QMainWindow subclass that saves its size.
+
+Takes a string identifier used in the setting keys, followed by any arguments
+for QMainWindow.
+
+"""
+    def __init__ (self, ident, *args, **kwargs):
+        self.ident = ident
+        qt.QMainWindow.__init__(self, *args, **kwargs)
+        w, h = settings['win_size_{}'.format(ident)][:2]
+        self.resize(w, h)
+        if settings['win_max_{}'.format(ident)]:
+            self.setWindowState(self.windowState() | qt.Qt.WindowMaximized)
+
+    def resizeEvent (self, evt):
+        """Save changes to window size."""
+        qt.QMainWindow.resizeEvent(self, evt)
+        size = evt.size()
+        settings['win_size_{}'.format(self.ident)] = (size.width(),
+                                                      size.height())
+
+    def changeEvent (self, evt):
+        """Save changes to maximised state."""
+        qt.QMainWindow.changeEvent(self, evt)
+        if evt.type() == qt.QEvent.WindowStateChange:
+            old = evt.oldState()
+            new = self.windowState()
+            is_max = bool(new & qt.Qt.WindowMaximized)
+
+            if bool(old & qt.Qt.WindowMaximized) != is_max:
+                settings['win_max_{}'.format(self.ident)] = is_max
