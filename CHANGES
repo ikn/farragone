@@ -1,4 +1,5 @@
 0.1.1-next:
+ * support unnamed groups in the regular expression field source
  * focus the input when adding a file or field source
  * save and restore window size and maximised state, and preview pane size
  * expand ~ in file paths

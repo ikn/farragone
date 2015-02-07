@@ -155,10 +155,14 @@ class RegexGroups (Fields):
 
 pattern: compiled regular expression (returned by `re.compile`); not implicitly
          anchored
+field_name_prefix: string giving the prefix for the field name for unname
+                   groups
 context: defines which part of the path to match against
 
-Fields come from named groups in `pattern` (eg. '(?P<name>[0-9]+)').  Fields
-are missing for paths not matching `pattern`.
+Fields come from groups in `pattern`; groups give field names with prefix
+`field_name_prefix` and suffix a number starting at 1, and named groups (eg.
+'(?P<name>[0-9]+)') also give fields named like the group.  Fields are missing
+for paths not matching `pattern`.
 
 Attributes:
 
@@ -166,14 +170,20 @@ pattern, context: as passed to the constructor
 
 """
 
-    def __init__ (self, pattern, context=Context.NAME):
-        self._names = list(pattern.groupindex.keys())
+    def __init__ (self, pattern, field_name_prefix, context=Context.NAME):
+        self._field_name_prefix = field_name_prefix
+        self._names = (list(pattern.groupindex.keys()) +
+                       list(map(self._field_name, range(pattern.groups))))
         self.pattern = pattern
         self.context = context
 
     @property
     def names (self):
         return self._names
+
+    def _field_name (self, idx):
+        # get the field name for a group by index
+        return self._field_name_prefix + str(idx + 1)
 
     def evaluate (self, paths):
         for path in paths:
@@ -183,7 +193,10 @@ pattern, context: as passed to the constructor
             except StopIteration:
                 yield {}
             else:
-                yield match.groupdict()
+                fields = {self._field_name(i): field
+                          for i, field in enumerate(match.groups())}
+                fields.update(match.groupdict())
+                yield fields
 
 
 class Ordering (Fields):

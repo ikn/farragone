@@ -281,13 +281,26 @@ Item states are dicts with 'fields' being a `core.field.Fields`.
             regex = re.compile(data['text_widget'].text())
         except re.error:
             regex = re.compile('')
-        return {'fields': core.field.RegexGroups(regex)}
+        field_name = data['field_widget'].text()
+        return {'fields': core.field.RegexGroups(regex, field_name)}
 
     def _new_regex (self, changed):
+        layout = qt.QHBoxLayout()
+
         text = qt.QLineEdit()
-        text.setText('(?P<group>.*)')
+        layout.addWidget(text, 3) # 3 times the size of the field name entry
+        text.setText('(?P<name>.*)\.(?P<ext>[^.]*)')
         text.textChanged.connect(changed)
-        return {'data': {'text_widget': text}, 'item': text}
+        field = qt.QLineEdit()
+        layout.addWidget(field, 1)
+        field.setText('name')
+        field.setPlaceholderText('Field name')
+        field.textChanged.connect(changed)
+
+        return {'data': {
+            'text_widget': text,
+            'field_widget': field
+        }, 'item': layout, 'focus': text}
 
     def _get_ordering_state (self, data):
         field_name = data['field_widget'].text()
