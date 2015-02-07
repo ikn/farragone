@@ -44,6 +44,8 @@ MIN_SIGNAL_INTERVAL = 0.2
 MAX_PREVIEW_LENGTH = 500
 # used to find an icon theme
 FALLBACK_DESKTOP = 'GNOME'
+# for non-freedesktop-aware environments
+LOCAL_ICON_THEME = 'Tango'
 
 
 class Settings (dict):
@@ -90,6 +92,8 @@ default value.  These operations raise `KeyError` for settings not in `defn`.
         os.makedirs(os.path.dirname(fn), exist_ok=True)
         with open(tmp_fn, 'w') as f:
             json.dump(self, f)
+        # can't rename if destination exists in Windows
+        os.remove(fn)
         os.rename(tmp_fn, fn)
 
     def __setitem__ (self, key, value):

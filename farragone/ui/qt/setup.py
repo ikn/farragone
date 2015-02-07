@@ -68,7 +68,7 @@ This must be called after creating the Qt application.
     def bad_icon_theme (name):
         # if there's no theme name, no lookups are performed
         # hicolor is missing important icons
-        return name is None or name == 'hicolor'
+        return not name or name == 'hicolor'
 
     current_theme = qt.QIcon.themeName()
     if bad_icon_theme(current_theme):
@@ -84,7 +84,7 @@ def init ():
 Returns when the user quits.
 
 """
-    fallback_theme = get_fallback_icon_theme(conf.APPLICATION,
+    fallback_theme = get_fallback_icon_theme(conf.LOCAL_ICON_THEME,
                                              conf.FALLBACK_DESKTOP)
     app = qt.QApplication([])
     apply_fallback_icon_theme(fallback_theme)
