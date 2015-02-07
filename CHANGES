@@ -4,6 +4,7 @@
  * save and restore window size and maximised state, and preview pane size
  * expand ~ in file paths
  * combine type dropdown with 'add' button for file and field sources
+ * bug: follows symlinks when finding file to move
  * bug: destination path is always lower-case on Windows
 
 0.1.1:

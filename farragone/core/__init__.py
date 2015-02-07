@@ -103,10 +103,8 @@ to: destination path
 Raises OSError.
 
 """
-    frm = os_path.realpath(frm)
-    to = os_path.realpath(to)
-
-    if os_path.normcase(frm) == os_path.normcase(to):
+    if (os_path.realpath(os_path.normcase(frm)) ==
+        os_path.realpath(os_path.normcase(to))):
         pass
     elif os_path.exists(to):
         raise DestinationExistsError(to)
