@@ -1,5 +1,6 @@
 import sys
 from platform import system
+import locale
 import os
 from os.path import join as join_path
 
@@ -10,6 +11,9 @@ if system() == 'Windows':
     PATH_HOME = os.environ['USERPROFILE']
     PATH_SHARE = join_path(os.environ['APPDATA'], IDENTIFIER)
     PATH_CONF = PATH_SHARE
+    # set language
+    if not os.environ.get('LANG'):
+        os.environ['LANG'] = locale.getdefaultlocale()[0]
 else:
     PATH_HOME = os.path.expanduser('~')
     PATH_SHARE = join_path(PATH_HOME, '.local', 'share', IDENTIFIER)
