@@ -47,6 +47,7 @@ On Unix-like OSs, once installed, just run `farragone' (installed to
 installing by
 
     ./configure
+    make inplace
     ./run
 
     KNOWN ISSUES

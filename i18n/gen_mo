@@ -1,0 +1,26 @@
+#! /bin/bash
+
+# generate MO files from the present translated PO files
+
+# takes output directory
+
+dest="$1"
+[ -z "$dest" ] && {
+    echo 1>&2 "expected output directory argument"
+    exit 2
+}
+
+po_dir="$(dirname "$0")"/po
+src_dir="$po_dir"/../..
+identifier="$(head -n1 "$src_dir/README")" # "${name} ${version}."
+prog="${identifier%% *}"
+ident="$(echo "$prog" | tr "[:upper:]" "[:lower:]")"
+
+shopt -s nullglob
+for po_file in "$po_dir"/*.po; do
+    lang="$(basename "$po_file")"
+    lang="${lang%.*}"
+    locale_dir="$dest/$lang/LC_MESSAGES"
+    mkdir -p "$locale_dir"
+    msgfmt -o "$locale_dir/$ident.mo" "$po_file"
+done

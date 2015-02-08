@@ -83,8 +83,9 @@ field_sets: normalised instances from the `field_sets` argument
         if not ignore_duplicate:
             extra_names = +(names - Counter(set(names)))
             if extra_names:
-                raise ValueError('cannot combine field sets: duplicate names',
-                                extra_names)
+                raise ValueError(_(
+                    'cannot combine field sets: duplicate names: {}'
+                ).format(' '.join(map(repr, extra_names))))
 
         self._names = list(names.keys())
         self.field_sets = sets if sets else [NoFields()]

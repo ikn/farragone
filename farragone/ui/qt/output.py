@@ -1,3 +1,4 @@
+# coding=utf-8
 """Farragone Qt UI preview system.
 
 This program is free software: you can redistribute it and/or modify it under
@@ -8,7 +9,7 @@ version."""
 from time import time
 
 from ... import core
-from .. import conf, util
+from ... import conf, util
 from . import qt, sync
 
 log = util.logger('qt.output:preview')
@@ -124,7 +125,8 @@ inputs: inp.Input
         use = min(space, got)
         if use > 0:
             self.insertPlainText('\n'.join(
-                '{} → {}'.format(repr(frm), repr(to))
+                # NOTE: rename preview: source -> destination
+                _('{} → {}').format(repr(frm), repr(to))
                 for frm, to in batch[:use]
             ) + '\n')
             self._lines += use

@@ -1,42 +1,23 @@
-"""Farragone UI configuration.
+"""Farragone configuration.
 
 This program is free software: you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free Software
 Foundation, either version 3 of the License, or (at your option) any later
 version."""
 
-import sys
-from platform import system
 import os
-from os.path import join as join_path
 import json
 
 from . import util
+from .coreconf import *
 
-IDENTIFIER = 'farragone'
-APPLICATION = 'Farragone'
-VERSION = '0.1.1-next'
-
-LOG = {
-    'qt.widgets.natural_widget_order': False,
-    'qt.output:preview': False
-}
-
-if system() == 'Windows':
-    HOME = os.environ['USERPROFILE']
-    SHARE = join_path(os.environ['APPDATA'], IDENTIFIER)
-    PATH_CONF = SHARE
-else:
-    HOME = os.path.expanduser('~')
-    SHARE = join_path(HOME, '.local', 'share', IDENTIFIER)
-    PATH_CONF = join_path(HOME, '.config', IDENTIFIER)
-CONF_FILE = join_path(PATH_CONF, 'settings')
+APPLICATION = _('Farragone')
 
 for d in set((PATH_CONF,)):
     try:
         os.makedirs(d, exist_ok = True)
     except OSError as e:
-        util.warn('failed creating directory: {}:'.format(repr(d)), e)
+        util.warn(_('failed creating directory: {}:').format(repr(d)), e)
 
 # minumum interval between Qt signals for potentially rapid emitters
 MIN_SIGNAL_INTERVAL = 0.2
@@ -74,7 +55,7 @@ default value.  These operations raise `KeyError` for settings not in `defn`.
         except FileNotFoundError:
             pass
         except (IOError, TypeError, ValueError) as e:
-            util.warn('loading settings failed:', e)
+            util.warn(_('loading settings failed: {}').format(str(e)))
 
         for key, item_defn in defn.items():
             self[key] = overrides.get(key, item_defn['default'])
@@ -105,7 +86,7 @@ default value.  These operations raise `KeyError` for settings not in `defn`.
             try:
                 self._save()
             except (IOError, OSError, TypeError) as e:
-                util.warn('saving settings failed:', e)
+                util.warn(_('saving settings failed: {}').format(str(e)))
         else:
             raise KeyError(key)
 
@@ -131,7 +112,7 @@ tuple, has the correct length, and has items with the expected types.
     return check
 
 
-settings = Settings(join_path(CONF_FILE), {
+settings = Settings(CONF_FILE, {
     # automatic
     'win_size_main': {
         'default': (600, 600),

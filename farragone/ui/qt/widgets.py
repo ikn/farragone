@@ -8,8 +8,8 @@ version."""
 import itertools
 from collections import deque
 
-from .. import util
-from ..conf import settings
+from ... import util
+from ...conf import settings
 from . import qt
 
 

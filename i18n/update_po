@@ -1,0 +1,36 @@
+#! /bin/bash
+
+# generate the POT file for translations
+
+po_dir="$(dirname "$0")"/po
+src_dir="$po_dir"/../..
+identifier="$(head -n1 "$src_dir/README")" # "${name} ${version}."
+prog="${identifier%% *}"
+ident="$(echo "$prog" | tr "[:upper:]" "[:lower:]")"
+version="${identifier#* }"
+version="${version%.}"
+
+# generate POT
+{
+    # xgettext options to put info in output don't seem to work...
+    echo "# Template for $prog translations.
+# This file is distributed under the new BSD license:
+#     http://opensource.org/licenses/BSD-3-Clause
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid \"\"
+msgstr \"\"
+\"Project-Id-Version: $version\n\""
+
+    find "$src_dir/$ident" -name "*.py" -print0 | \
+        xargs -0 xgettext -cNOTE -LPython -o- | \
+        tail -n+10
+} > "$po_dir/messages.pot"
+
+# update PO
+shopt -s nullglob
+for po in "$po_dir/"*.po; do
+    msgmerge -N "$po" "$po_dir/messages.pot" -o "$po.tmp"
+    mv "$po.tmp" "$po"
+done

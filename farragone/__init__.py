@@ -5,4 +5,10 @@ the terms of the GNU General Public License as published by the Free Software
 Foundation, either version 3 of the License, or (at your option) any later
 version."""
 
-from . import core, ui
+import gettext
+
+from . import coreconf as _conf, core, ui
+
+gettext.install(_conf.IDENTIFIER, _conf.PATH_LOCALE, names=('ngettext',))
+
+from . import conf, util

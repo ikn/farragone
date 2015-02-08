@@ -5,13 +5,12 @@ the terms of the GNU General Public License as published by the Free Software
 Foundation, either version 3 of the License, or (at your option) any later
 version."""
 
-import sys
 import os
 import signal
 from platform import system
 from multiprocessing import Pipe, Process
 
-from .. import conf, util
+from ... import conf, util
 from . import qt, window
 
 _freedesktop = system() != 'Windows'
@@ -73,7 +72,7 @@ This must be called after creating the Qt application.
     current_theme = qt.QIcon.themeName()
     if bad_icon_theme(current_theme):
         if bad_icon_theme(fallback_theme):
-            util.warn('no suitable icon theme found')
+            util.warn(_('no suitable icon theme found'))
         else:
             qt.QIcon.setThemeName(fallback_theme)
 
@@ -90,10 +89,8 @@ Returns when the user quits.
     apply_fallback_icon_theme(fallback_theme)
 
     # add icon theme path for application icon for running in-place
-    qt.QIcon.setThemeSearchPaths(
-        qt.QIcon.themeSearchPaths() +
-        [os.path.join(os.path.dirname(sys.argv[0]), 'icons')]
-    )
+    qt.QIcon.setThemeSearchPaths(qt.QIcon.themeSearchPaths() +
+                                 [conf.PATH_ICONS])
 
     app.setApplicationName(conf.APPLICATION)
     app.setApplicationVersion(conf.VERSION)

@@ -7,12 +7,12 @@ version."""
 
 from collections import Counter
 
-from .. import conf
+from ... import conf
 settings = conf.settings
 from . import qt, widgets, inp, output, run
 
 _lock_messages = {
-    'run': 'Cannot quit while renaming is in progress.'
+    'run': _('Cannot quit while renaming is in progress.')
 }
 
 

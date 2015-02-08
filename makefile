@@ -9,6 +9,8 @@ datadir := $(datarootdir)/$(IDENT)
 bindir := $(exec_prefix)/bin
 docdir := $(datarootdir)/doc/$(IDENT)
 python_lib := $(shell ./get_python_lib "$(DESTDIR)$(prefix)")
+localedir := $(datarootdir)/locale
+local_localedir := ./locale
 
 ICON_ROOT := icons/hicolor
 ICON_DIRS := $(patsubst $(ICON_ROOT)/%/apps,%,$(wildcard $(ICON_ROOT)/*/apps))
@@ -16,13 +18,17 @@ ICON_DIR_PATH = $(ICON_ROOT)/$(patsubst icons-install-%,%,$@)/apps
 ICON_DIR_PATH_UNINSTALL = $(ICON_ROOT)/$(patsubst icons-uninstall-%,%,$@)/apps
 ICON_PATH_UNINSTALL = $(wildcard $(ICON_DIR_PATH_UNINSTALL)/*)
 
-.PHONY: all clean distclean install uninstall
+.PHONY: all inplace clean distclean install uninstall
 
 all:
 	./setup build
 
+inplace:
+	./i18n/gen_mo "$(local_localedir)"
+
 clean:
 	$(RM) -r build
+	$(RM) -r "$(local_localedir)"
 
 distclean: clean
 	@ ./configure reverse
@@ -51,6 +57,8 @@ install: $(patsubst %,icons-install-%,$(ICON_DIRS))
 	@ # desktop file
 	mkdir -p "$(DESTDIR)$(datarootdir)/applications"
 	$(INSTALL_DATA) $(IDENT).desktop "$(DESTDIR)$(datarootdir)/applications"
+	@ # locale
+	./i18n/gen_mo "$(localedir)"
 
 uninstall: $(patsubst %,icons-uninstall-%,$(ICON_DIRS))
 	@ # executable
@@ -63,3 +71,5 @@ uninstall: $(patsubst %,icons-uninstall-%,$(ICON_DIRS))
 	$(RM) -r "$(DESTDIR)$(docdir)/"
 	@ # desktop file
 	$(RM) "$(DESTDIR)$(datarootdir)/applications/$(IDENT).desktop"
+	@ # locale
+	$(RM) "$(localedir)"/*/LC_MESSAGES/$(IDENT).mo

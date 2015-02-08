@@ -1,3 +1,4 @@
+# coding=utf-8
 """Farragone Qt UI job running.
 
 This program is free software: you can redistribute it and/or modify it under
@@ -79,9 +80,10 @@ failed: list of error strings for the current/previous run
     def __init__ (self, inputs):
         qt.QHBoxLayout.__init__(self)
         self._run_btn = widgets.mk_button(qt.QPushButton, {
-            'text': '&Run',
+            # NOTE: & marks the keyboard accelerator
+            'text': _('&Run'),
             'icon': 'media-playback-start',
-            'tooltip': 'Start the file renaming process',
+            'tooltip': _('Start the file renaming process'),
             'clicked': self.run
         })
         self.addWidget(self._run_btn)
@@ -97,27 +99,50 @@ failed: list of error strings for the current/previous run
         self.failed = []
         self.update_status()
 
+    def _failed_status (self, as_prefix):
+        if as_prefix:
+            failed_msg = ngettext(
+                # NOTE: placeholder is the number of failed operations
+                '{} failed', '{} failed', len(self.failed)
+            ).format(len(self.failed))
+            return '<font color="red">[{}]</font>'.format(failed_msg)
+        else:
+            failed_msg = ngettext(
+                # NOTE: placeholders are the number of failed operations and the
+                # failure reason
+                '{} failed: {}', '{} failed: {}', len(self.failed)
+            ).format(len(self.failed), self.failed[0])
+            return '<font color="red">{}</font>'.format(failed_msg)
+
+    def _op_status (self):
+        frm, to = self.current_operation
+        # NOTE: current rename display: source -> destination
+        return escape(_('{} → {}').format(repr(frm), repr(to)))
+
     def status_text (self):
         """Get Qt rich text giving the current status."""
-        text = ''
         if self.failed:
             if self.running:
-                text += ' <font color="red">[{} failed]</font>'.format(
-                    len(self.failed))
+                if self.current_operation is not None:
+                    text = '{} {}'.format(self._failed_status(as_prefix=True),
+                                          self._op_status())
+                else:
+                    text = self._failed_status(as_prefix=True)
             else:
-                text += ' <font color="red">{} failed: {}</font>'.format(
-                    len(self.failed), self.failed[0])
-        elif not self.running:
-            text += ' success'
+                text = self._failed_status(as_prefix=False)
+        elif self.running:
+            if self.current_operation is not None:
+                text = self._op_status()
+            else:
+                text = _('processing...')
+        else:
+            text = _('success')
 
-        if self.current_operation is not None:
-            frm, to = self.current_operation
-            text += escape(' {} → {}'.format(repr(frm), repr(to)))
-
-        if not text:
-            text = ' processing...'
-        return '<i>{}:{}</i>'.format(
-            'Running' if self.running else 'Finished', text)
+        # NOTE: status line
+        msg = (_('Running: {}') if self.running
+               # NOTE: status line
+               else _('Finished: {}'))
+        return '<i>{}</i>'.format(msg.format(text))
 
     def update_status (self):
         """Update display with the current status."""

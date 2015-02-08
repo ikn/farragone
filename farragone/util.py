@@ -1,4 +1,4 @@
-"""Farragone UI utilities.
+"""Farragone general utilities.
 
 This program is free software: you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free Software
@@ -8,12 +8,13 @@ version."""
 import sys
 from time import time
 
-from .. import ui
+from . import coreconf as conf
 
 
 def warn (*args):
     """Print a general warning log."""
-    print('warning:', *args, file=sys.stderr)
+    # NOTE: log line
+    print(_('warning: {}').format(' '.join(map(str, args))), file=sys.stderr)
 
 
 def logger (name):
@@ -22,7 +23,7 @@ def logger (name):
 name: corresponds to `conf.LOG` keys
 
 """
-    enabled = ui.conf.LOG.get(name, False)
+    enabled = conf.LOG.get(name, False)
     prefix = '[{}]'.format(name)
 
     def log (*args):

@@ -10,8 +10,7 @@ import re
 import locale
 from html import escape
 
-from ... import core
-from .. import util
+from ... import util, core
 from . import qt, widgets
 
 
@@ -164,24 +163,27 @@ Item states are dicts with 'input' being a `core.inputs.Input`.
 """
 
     ident = 'files'
-    name = 'Files'
+    # NOTE: UI section heading
+    name = _('Files')
 
     def __init__ (self):
         CustomList.__init__(self, [
             {
                 'id': 'glob',
-                'name': 'Pattern',
-                'description': 'Use a glob-style pattern',
+                # NOTE: file source type name
+                'name': _('Pattern'),
+                'description': _('Use a glob-style pattern'),
                 'create': self._new_glob,
                 'getstate': self._get_glob_state
             }, {
                 'id': 'list',
-                'name': 'List',
-                'description': 'Specify files manually',
+                # NOTE: file source type name
+                'name': _('List'),
+                'description': _('Specify files manually'),
                 'create': self._new_list,
                 'getstate': self._get_list_state
             }
-        ], 'Add a source of files', 'Remove this source of files')
+        ], _('Add a source of files'), _('Remove this source of files'))
 
     def _get_list_state (self, data):
         paths = filter(lambda path: path,
@@ -193,7 +195,7 @@ Item states are dicts with 'input' being a `core.inputs.Input`.
         text.setLineWrapMode(qt.QPlainTextEdit.NoWrap)
         # QPlainTextEdit.setPlaceholderText is new in Qt 5.3
         try:
-            text.setPlaceholderText('List of files, one per line')
+            text.setPlaceholderText(_('List of files, one per line'))
         except AttributeError:
             pass
         text.textChanged.connect(changed)
@@ -204,8 +206,10 @@ Item states are dicts with 'input' being a `core.inputs.Input`.
 
     def _new_glob (self, changed):
         text = qt.QLineEdit()
-        text.setPlaceholderText('Glob-style pattern')
-        text.setText('*.ext')
+        text.setPlaceholderText(_('Glob-style pattern'))
+        # NOTE: default value for the 'Pattern' file source; 'ext' means file
+        # extension
+        text.setText(_('*.ext'))
         text.textChanged.connect(changed)
         return {'data': {'text_widget': text}, 'item': text}
 
@@ -218,30 +222,35 @@ Item states are dicts with 'fields' being a `core.field.Fields`.
 """
 
     ident = 'fields'
-    name = 'Fields'
+    # NOTE: UI section heading
+    name = _('Fields')
 
     def __init__ (self):
         CustomList.__init__(self, [
             {
                 'id': 'component',
-                'name': 'Path Component',
-                'description': 'Use the filename or a directory from the path',
+                # NOTE: field source type name
+                'name': _('Path Component'),
+                'description':
+                    _('Use the filename or a directory from the path'),
                 'create': self._new_component,
                 'getstate': self._get_component_state
             }, {
                 'id': 'regex',
-                'name': 'Regular Expression',
+                # NOTE: field source type name
+                'name': _('Regular Expression'),
                 'description': 'Capture groups from a matching regex',
                 'create': self._new_regex,
                 'getstate': self._get_regex_state
             }, {
                 'id': 'ordering',
-                'name': 'Ordering',
-                'description': 'Use the position when the files are ordered',
+                # NOTE: field source type name
+                'name': _('Ordering'),
+                'description': _('Use the position when the files are ordered'),
                 'create': self._new_ordering,
                 'getstate': self._get_ordering_state
             }
-        ], 'Add a source of fields', 'Remove this source of fields')
+        ], _('Add a source of fields'), _('Remove this source of fields'))
 
     def names (self):
         """Get a set of the names of all defined fields."""
@@ -263,12 +272,14 @@ Item states are dicts with 'fields' being a `core.field.Fields`.
         idx = qt.QLineEdit()
         layout.addWidget(idx)
         idx.setText('-1')
-        idx.setPlaceholderText('Path component index')
+        idx.setPlaceholderText(_('Path component index'))
         idx.textChanged.connect(changed)
         field = qt.QLineEdit()
         layout.addWidget(field)
-        field.setText('name')
-        field.setPlaceholderText('Field name')
+        # NOTE: default value for the field name for the 'Path Component' field
+        # source
+        field.setText(_('name'))
+        field.setPlaceholderText(_('Field name'))
         field.textChanged.connect(changed)
 
         return {'data': {
@@ -289,12 +300,16 @@ Item states are dicts with 'fields' being a `core.field.Fields`.
 
         text = qt.QLineEdit()
         layout.addWidget(text, 3) # 3 times the size of the field name entry
-        text.setText('(?P<name>.*)\.(?P<ext>[^.]*)')
+        # NOTE: default value for the 'Regular Expression' field source; 'ext'
+        # means file extension
+        text.setText(_('(?P<name>.*)\.(?P<ext>[^.]*)'))
         text.textChanged.connect(changed)
         field = qt.QLineEdit()
         layout.addWidget(field, 1)
-        field.setText('name')
-        field.setPlaceholderText('Field name')
+        # NOTE: default value for the field name for the 'Path Component' field
+        # source
+        field.setText(_('name'))
+        field.setPlaceholderText(_('Field name'))
         field.textChanged.connect(changed)
 
         return {'data': {
@@ -315,18 +330,20 @@ Item states are dicts with 'fields' being a `core.field.Fields`.
     def _new_ordering (self, changed):
         layout = qt.QGridLayout()
 
-        case_sensitive = qt.QCheckBox('Case-sensitive')
+        case_sensitive = qt.QCheckBox(_('Case-sensitive'))
         layout.addWidget(case_sensitive, 0, 0)
         case_sensitive.stateChanged.connect(changed)
-        ascending = qt.QCheckBox('Ascending')
+        # NOTE: sort order
+        ascending = qt.QCheckBox(_('Ascending'))
         layout.addWidget(ascending, 0, 1)
         ascending.setChecked(True)
         ascending.stateChanged.connect(changed)
 
         field = qt.QLineEdit()
         layout.addWidget(field, 1, 0, 1, 2)
-        field.setText('position')
-        field.setPlaceholderText('Field name')
+        # NOTE: default value for the field name for the 'Ordering' field source
+        field.setText(_('position'))
+        field.setPlaceholderText(_('Field name'))
         field.textChanged.connect(changed)
 
         return {'data': {
@@ -336,11 +353,13 @@ Item states are dicts with 'fields' being a `core.field.Fields`.
         }, 'item': layout, 'focus': field}
 
 
+'''
 class FieldTransformsSection (Dynamic, Changing, qt.QVBoxLayout):
     """UI section for defining field transformations."""
 
     ident = 'transforms'
-    name = 'Field Transforms'
+    # NOTE: UI section heading
+    name = _('Field Transforms')
 
     def __init__ (self, fields):
         Changing.__init__(self)
@@ -367,7 +386,7 @@ class FieldTransformsSection (Dynamic, Changing, qt.QVBoxLayout):
         layout.addWidget(widgets.mk_label(name))
         text = qt.QLineEdit()
         layout.addWidget(text)
-        text.setPlaceholderText('Python 3 code transform')
+        text.setPlaceholderText(_('Python 3 code transform'))
         text.textChanged.connect(self.changed)
 
         row = widgets.widget_from_layout(layout)
@@ -379,6 +398,7 @@ class FieldTransformsSection (Dynamic, Changing, qt.QVBoxLayout):
         row = self._items.pop(name)
         self.removeWidget(row)
         row.deleteLater()
+'''
 
 
 class TemplateSection (Changing, qt.QVBoxLayout):
@@ -391,7 +411,8 @@ template: `string.Template`
 """
 
     ident = 'template'
-    name = 'Template'
+    # NOTE: UI section heading
+    name = _('Template')
 
     def __init__ (self):
         Changing.__init__(self)
@@ -403,7 +424,7 @@ template: `string.Template`
 
         text = qt.QLineEdit()
         self.addWidget(text)
-        text.setPlaceholderText('Destination path template')
+        text.setPlaceholderText(_('Destination path template'))
         text.textChanged.connect(changed_text)
         changed_text('')
 
