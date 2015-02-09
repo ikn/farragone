@@ -58,7 +58,7 @@ install: $(patsubst %,icons-install-%,$(ICON_DIRS))
 	mkdir -p "$(DESTDIR)$(datarootdir)/applications"
 	$(INSTALL_DATA) $(IDENT).desktop "$(DESTDIR)$(datarootdir)/applications"
 	@ # locale
-	./i18n/gen_mo "$(localedir)"
+	./i18n/gen_mo "$(DESTDIR)$(localedir)"
 
 uninstall: $(patsubst %,icons-uninstall-%,$(ICON_DIRS))
 	@ # executable
@@ -72,4 +72,4 @@ uninstall: $(patsubst %,icons-uninstall-%,$(ICON_DIRS))
 	@ # desktop file
 	$(RM) "$(DESTDIR)$(datarootdir)/applications/$(IDENT).desktop"
 	@ # locale
-	$(RM) "$(localedir)"/*/LC_MESSAGES/$(IDENT).mo
+	$(RM) "$(DESTDIR)$(localedir)"/*/LC_MESSAGES/$(IDENT).mo

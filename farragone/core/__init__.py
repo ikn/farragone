@@ -33,6 +33,7 @@ cwd: directory that `path` is relative to (default: Python process's current
 class DestinationExistsError (OSError):
     """Failed to rename a file because the destination path already exists."""
     def __init__ (self, dest):
+        # NOTE: trying to rename to a file that already exists
         OSError.__init__(self, _('destination exists: {}').format(repr(dest)))
 
 

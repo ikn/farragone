@@ -22,5 +22,5 @@ for po_file in "$po_dir"/*.po; do
     lang="${lang%.*}"
     locale_dir="$dest/$lang/LC_MESSAGES"
     mkdir -p "$locale_dir"
-    msgfmt -o "$locale_dir/$ident.mo" "$po_file"
+    msgfmt -vv -o "$locale_dir/$ident.mo" "$po_file"
 done

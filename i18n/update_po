@@ -31,6 +31,6 @@ msgstr \"\"
 # update PO
 shopt -s nullglob
 for po in "$po_dir/"*.po; do
-    msgmerge -N "$po" "$po_dir/messages.pot" -o "$po.tmp"
+    msgmerge -v -N "$po" "$po_dir/messages.pot" -o "$po.tmp"
     mv "$po.tmp" "$po"
 done
