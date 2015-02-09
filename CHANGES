@@ -1,4 +1,4 @@
-0.1.1-next:
+0.1.2:
  * internationalisation support
  * Windows support
  * support unnamed groups in the regular expression field source

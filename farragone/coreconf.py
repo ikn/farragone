@@ -5,7 +5,7 @@ import os
 from os.path import join as join_path
 
 IDENTIFIER = 'farragone'
-VERSION = '0.1.1-next'
+VERSION = '0.1.2'
 
 if system() == 'Windows':
     PATH_HOME = os.environ['USERPROFILE']
