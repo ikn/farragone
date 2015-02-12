@@ -13,7 +13,6 @@ from multiprocessing import Pipe, Process
 from ... import conf, util
 from . import qt, window
 
-_freedesktop = system() != 'Windows'
 # contains desktop environment (if any) on freedesktop systems
 _desktop_lookup = 'XDG_CURRENT_DESKTOP'
 
@@ -41,7 +40,7 @@ Returns the theme name.
         app = qt.QApplication([])
         pipe.send(qt.QIcon.themeName())
 
-    if not _freedesktop:
+    if not conf.FREEDESKTOP:
         fallback_theme = local_theme
     elif os.environ.get(_desktop_lookup):
         fallback_theme = None

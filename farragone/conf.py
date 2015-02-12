@@ -13,12 +13,13 @@ from .coreconf import *
 
 APPLICATION = _('Farragone')
 
-for d in set((PATH_CONF,)):
+for d in (PATH_CONF_WRITE,):
     try:
         os.makedirs(d, exist_ok = True)
     except OSError as e:
         util.warn(_('failed creating directory: {}:').format(repr(d)), e)
 
+CONF_FILENAME = 'settings'
 # minumum interval between Qt signals for potentially rapid emitters
 MIN_SIGNAL_INTERVAL = 0.2
 # maximum number of renames shown in the preview
@@ -32,7 +33,8 @@ LOCAL_ICON_THEME = 'Tango'
 class Settings (dict):
     """`dict`-like settings storage with JSON file backend.
 
-fn: filename to load from and save to
+load_fns: filenames to load from
+save_fn: filename to save to
 defn: `dict` with keys being available setting names and values being `dict`s:
       { 'default': default, 'validate': validate }.  `default` is the default
       value and `validate` is a function taking a new value for the setting and
@@ -43,28 +45,33 @@ default value.  These operations raise `KeyError` for settings not in `defn`.
 
 """
 
-    def __init__ (self, fn, defn):
-        self.filename = fn
+    def __init__ (self, load_fns, save_fn, defn):
+        self.filename = save_fn
         self.definition = defn
 
-        overrides = {}
-        try:
-            overrides = self._load()
-            if not isinstance(overrides, dict):
-                raise TypeError(overrides)
-        except FileNotFoundError:
-            pass
-        except (IOError, TypeError, ValueError) as e:
-            util.warn(_('loading settings failed: {}').format(str(e)))
+        self.update({key: item_defn['default']
+                     for key, item_defn in defn.items()})
+        for fn in load_fns:
+            overrides = self._load(fn)
+            self.update({key: value for key, value in overrides.items()
+                         if key in defn})
 
-        for key, item_defn in defn.items():
-            self[key] = overrides.get(key, item_defn['default'])
-
-    def _load (self):
+    def _load (self, fn):
         # load settings from disk
-        with open(self.filename) as f:
-            data = json.load(f)
-        return data
+        try:
+            with open(fn) as f:
+                data = json.load(f)
+            if not isinstance(data, dict):
+                raise TypeError(data)
+        except FileNotFoundError:
+            return {}
+        except (IOError, TypeError, ValueError) as e:
+            # NOTE: placeholders are filename and system error message
+            util.warn(_('loading settings from {} failed: {}')
+                      .format(repr(fn), str(e)))
+            return {}
+        else:
+            return data
 
     def _save (self):
         # save settings to disk
@@ -74,7 +81,10 @@ default value.  These operations raise `KeyError` for settings not in `defn`.
         with open(tmp_fn, 'w') as f:
             json.dump(self, f)
         # can't rename if destination exists in Windows
-        os.remove(fn)
+        try:
+            os.remove(fn)
+        except FileNotFoundError:
+            pass
         os.rename(tmp_fn, fn)
 
     def __setitem__ (self, key, value):
@@ -86,13 +96,14 @@ default value.  These operations raise `KeyError` for settings not in `defn`.
             try:
                 self._save()
             except (IOError, OSError, TypeError) as e:
+                # NOTE: placeholder is system error message
                 util.warn(_('saving settings failed: {}').format(str(e)))
         else:
             raise KeyError(key)
 
     def __delitem__ (self, key):
         # raises KeyError
-        self[key] = self.definition[key]
+        self[key] = self.definition[key]['default']
 
 
 def tuple_check (*types):
@@ -112,18 +123,22 @@ tuple, has the correct length, and has items with the expected types.
     return check
 
 
-settings = Settings(CONF_FILE, {
-    # automatic
-    'win_size_main': {
-        'default': (600, 600),
-        'validate': tuple_check(int, int)
-    },
-    'win_max_main': {
-        'default': False,
-        'validate': lambda x: isinstance(x, bool)
-    },
-    'splitter_ratio_main': {
-        'default': .5,
-        'validate': lambda x: isinstance(x, (int, float)) and 0 <= x <= 1
+settings = Settings(
+    [join_path(path, CONF_FILENAME) for path in PATHS_CONF_READ],
+    join_path(PATH_CONF_WRITE, CONF_FILENAME),
+    {
+        # automatic
+        'win_size_main': {
+            'default': (600, 600),
+            'validate': tuple_check(int, int)
+        },
+        'win_max_main': {
+            'default': False,
+            'validate': lambda x: isinstance(x, bool)
+        },
+        'splitter_ratio_main': {
+            'default': .5,
+            'validate': lambda x: isinstance(x, (int, float)) and 0 <= x <= 1
+        }
     }
-})
+)
