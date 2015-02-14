@@ -43,7 +43,7 @@ class Window (widgets.Window):
         top.setChildrenCollapsible(False)
         layout.addWidget(top, 1)
         top.addWidget(inputs)
-        top.addWidget(out)
+        top.addWidget(out.widget)
         ratio = int(100 * settings['splitter_ratio_main'])
         top.setStretchFactor(0, ratio)
         top.setStretchFactor(1, 100 - ratio)

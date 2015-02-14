@@ -215,3 +215,108 @@ for QMainWindow.
 
             if bool(old & qt.Qt.WindowMaximized) != is_max:
                 settings['win_max_{}'.format(self.ident)] = is_max
+
+
+class Tab (qt.QObject):
+    """Tab representation for use with TabWidget.
+
+name: tab label; may define accelerators using '&'
+widget: QWidget to use as the page for the tab
+icon: icon name or `None`
+closeable: whether the tab has a close button and can be closed
+
+Attributes:
+
+name, widget, closeable: as given
+icon: QIcon
+error_signal: emitted with the current 'error' state when it changes
+new_signal: emitted with the current 'new' state when it changes
+
+"""
+
+    error_signal = qt.pyqtSignal(bool)
+    new_signal = qt.pyqtSignal(bool)
+
+    def __init__ (self, name, widget, icon=None, closeable=False):
+        qt.QObject.__init__(self)
+        self.name = name
+        self.widget = widget
+        self.icon = qt.QIcon() if icon is None else qt.QIcon.fromTheme(icon)
+        self.closeable = closeable
+        self._error = False
+        self._new = False
+
+    @property
+    def error (self):
+        """Whether this tab is in an error state."""
+        return self._error
+
+    @error.setter
+    def error (self, error_state):
+        self._error = error_state
+        self.error_signal.emit(error_state)
+
+    @property
+    def new (self):
+        """Whether this tab contains new content."""
+        return self._new
+
+    @new.setter
+    def new (self, new_state):
+        self._new = new_state
+        self.new_signal.emit(new_state)
+
+
+class TabWidget:
+    """Tab widget whose tabs are individually closeable and have
+error/new states.
+
+Attributes:
+
+widget: QTabWidget; adding tabs directly will not apply correct formatting
+
+"""
+
+    def __init__ (self):
+        self.widget = qt.QTabWidget()
+        self.widget.setTabsClosable(True)
+        self._tabs = {}
+
+    def tab_index (self, tab):
+        return self.widget.indexOf(tab.widget)
+
+    def _set_error (self, tab, error_state):
+        # update tab formatting to match the given 'error' state
+        # QColor() is an invalid colour, which gives the default colour
+        colour = qt.QColor(qt.Qt.red) if error_state else qt.QColor()
+        self.widget.tabBar().setTabTextColor(self.tab_index(tab), colour)
+
+    def _set_new (self, tab, new_state):
+        # update tab formatting to match the given 'new' state
+        text = ('* ' if new_state else '') + tab.name
+        self.widget.setTabText(self.tab_index(tab), text)
+
+    def _init_new_tab (self, tab):
+        # apply initial formatting to an added tab
+        i = self.tab_index(tab)
+        self.widget.setTabIcon(i, tab.icon)
+        if not tab.closeable:
+            bar = self.widget.tabBar()
+            bar.setTabButton(i, qt.QTabBar.LeftSide, None)
+            bar.setTabButton(i, qt.QTabBar.RightSide, None)
+        self._set_error(tab, tab.error)
+        self._set_new(tab, tab.new)
+
+        tab.error_signal.connect(
+            lambda error_state: self._set_error(tab, error_state))
+        tab.new_signal.connect(
+            lambda new_state: self._set_error(tab, new_state))
+
+    def add (self, tab):
+        """Add a new tab to the end of the list.
+
+tab: Tab.
+
+"""
+        self.widget.addTab(tab.widget, tab.name)
+        self._init_new_tab(tab)
