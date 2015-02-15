@@ -39,7 +39,7 @@ inputs: inp.Inputs
 when finished.
 
 """
-        inps, fields, transform, template = self._inputs.gather()
+        inps, fields, transform, template, warnings = self._inputs.gather()
         start_op = self.signals.start_op
         end_op = self.signals.end_op
 

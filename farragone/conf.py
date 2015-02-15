@@ -24,6 +24,8 @@ CONF_FILENAME = 'settings'
 MIN_SIGNAL_INTERVAL = 0.2
 # maximum number of renames shown in the preview
 MAX_PREVIEW_LENGTH = 500
+# maximum number of warning details to show for each category
+MAX_WARNINGS_PER_CATEGORY = 3
 # used to find an icon theme
 FALLBACK_DESKTOP = 'GNOME'
 # for non-freedesktop-aware environments

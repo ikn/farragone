@@ -1,5 +1,5 @@
 0.1.2-next:
- * tabbed output section
+ * tabbed output section with warnings tab
  * support XDG paths
 
 0.1.2:

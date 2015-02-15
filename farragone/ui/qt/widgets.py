@@ -240,11 +240,17 @@ new_signal: emitted with the current 'new' state when it changes
     def __init__ (self, name, widget, icon=None, closeable=False):
         qt.QObject.__init__(self)
         self.name = name
+        widget._tab = self
         self.widget = widget
         self.icon = qt.QIcon() if icon is None else qt.QIcon.fromTheme(icon)
         self.closeable = closeable
         self._error = False
         self._new = False
+
+    @staticmethod
+    def from_page (widget):
+        # get a Tab given the widget used as its page
+        return widget._tab
 
     @property
     def error (self):
@@ -253,8 +259,9 @@ new_signal: emitted with the current 'new' state when it changes
 
     @error.setter
     def error (self, error_state):
-        self._error = error_state
-        self.error_signal.emit(error_state)
+        if error_state != self._error:
+            self._error = error_state
+            self.error_signal.emit(error_state)
 
     @property
     def new (self):
@@ -263,8 +270,9 @@ new_signal: emitted with the current 'new' state when it changes
 
     @new.setter
     def new (self, new_state):
-        self._new = new_state
-        self.new_signal.emit(new_state)
+        if new_state != self._new:
+            self._new = new_state
+            self.new_signal.emit(new_state)
 
 
 class TabWidget:
@@ -280,6 +288,7 @@ widget: QTabWidget; adding tabs directly will not apply correct formatting
     def __init__ (self):
         self.widget = qt.QTabWidget()
         self.widget.setTabsClosable(True)
+        self.widget.currentChanged.connect(self._current_changed)
         self._tabs = {}
 
     def tab_index (self, tab):
@@ -293,8 +302,17 @@ widget: QTabWidget; adding tabs directly will not apply correct formatting
 
     def _set_new (self, tab, new_state):
         # update tab formatting to match the given 'new' state
-        text = ('* ' if new_state else '') + tab.name
-        self.widget.setTabText(self.tab_index(tab), text)
+        i = self.tab_index(tab)
+        if new_state and i == self.widget.currentIndex():
+            # shouldn't make it new, and shouldn't think it's new
+            tab.new = False
+        else:
+            text = ('* ' if new_state else '') + tab.name
+            self.widget.setTabText(i, text)
+
+    def _current_changed (self, i):
+        # current tab changed to index i
+        Tab.from_page(self.widget.widget(i)).new = False
 
     def _init_new_tab (self, tab):
         # apply initial formatting to an added tab
@@ -310,7 +328,7 @@ widget: QTabWidget; adding tabs directly will not apply correct formatting
         tab.error_signal.connect(
             lambda error_state: self._set_error(tab, error_state))
         tab.new_signal.connect(
-            lambda new_state: self._set_error(tab, new_state))
+            lambda new_state: self._set_new(tab, new_state))
 
     def add (self, tab):
         """Add a new tab to the end of the list.

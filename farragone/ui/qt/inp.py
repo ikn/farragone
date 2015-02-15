@@ -481,6 +481,7 @@ inps: sequence of `core.inputs.Input`
 fields: `core.inputs.Fields`
 transform: fields transformation function
 template: `string.Template` for the output path
+warnings: sequence of warnings, each `(category, detail)` strings
 
 """
         inps = [f['state']['input'] for f in self.files.items]
@@ -488,4 +489,4 @@ template: `string.Template` for the output path
         fields = core.field.FieldCombination(*field_sets, ignore_duplicate=True)
         transform = lambda f: f
         template = self.template.template
-        return (inps, fields, transform, template)
+        return (inps, fields, transform, template, [])

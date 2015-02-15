@@ -26,7 +26,7 @@ inputs: inp.Input
 
         self.preview = preview.Preview(inputs)
         self.add(self.preview.renames)
-        #self.add(self.preview.warnings)
+        self.add(self.preview.warnings)
 
     def update (self):
         """Update the preview tabs from the input section."""
