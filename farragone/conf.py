@@ -19,18 +19,6 @@ for d in (PATH_CONF_WRITE,):
     except OSError as e:
         util.warn(_('failed creating directory: {}:').format(repr(d)), e)
 
-CONF_FILENAME = 'settings'
-# minumum interval between Qt signals for potentially rapid emitters
-MIN_SIGNAL_INTERVAL = 0.2
-# maximum number of renames shown in the preview
-MAX_PREVIEW_LENGTH = 500
-# maximum number of warning details to show for each category
-MAX_WARNINGS_PER_CATEGORY = 3
-# used to find an icon theme
-FALLBACK_DESKTOP = 'GNOME'
-# for non-freedesktop-aware environments
-LOCAL_ICON_THEME = 'Tango'
-
 
 class Settings (dict):
     """`dict`-like settings storage with JSON file backend.
@@ -69,7 +57,7 @@ default value.  These operations raise `KeyError` for settings not in `defn`.
             return {}
         except (IOError, TypeError, ValueError) as e:
             # NOTE: placeholders are filename and system error message
-            util.warn(_('loading settings from {} failed: {}')
+            util.warn(_('loading settings from {0} failed: {1}')
                       .format(repr(fn), str(e)))
             return {}
         else:

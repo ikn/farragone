@@ -17,7 +17,8 @@ except OSError:
     pass
 PATH_ICONS = join_path(PATH_PKG, 'icons')
 
-FREEDESKTOP = system() != 'Windows'
+WINDOWS = system() == 'Windows'
+FREEDESKTOP = not WINDOWS
 if FREEDESKTOP:
     PATH_HOME = os.path.expanduser('~')
     PATH_DATA = (os.environ.get('XDG_DATA_HOME') or
@@ -42,3 +43,15 @@ LOG = {
     'qt.widgets.natural_widget_order': False,
     'qt.output:preview': False
 }
+
+CONF_FILENAME = 'settings'
+# minumum interval between Qt signals for potentially rapid emitters
+MIN_SIGNAL_INTERVAL = 0.2
+# maximum number of renames shown in the preview
+MAX_PREVIEW_LENGTH = 500
+# maximum number of warning details to show for each category
+MAX_WARNINGS_PER_CATEGORY = 3
+# used to find an icon theme
+FALLBACK_DESKTOP = 'GNOME'
+# for non-freedesktop-aware environments
+LOCAL_ICON_THEME = 'Tango'

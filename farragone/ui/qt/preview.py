@@ -69,14 +69,24 @@ each checked rename.
 """
         # reset timer for automatic `started` signal
         self._reset_signal()
-        inps, fields, transform, template, warnings = self._inputs.gather()
+        inps, fields, transform, template = self._inputs.gather()
         interrupted = False
         sent = 0
         ops = []
-        warnings = list(warnings)
 
-        for frm, to in core.get_renames(inps, fields, template, transform):
+        warnings = list(fields.warnings)
+        try:
+            template.substitute()
+        except ValueError as e:
+            warnings.append(util.Warn('template', util.exc_str(e)))
+        except KeyError:
+            pass
+
+        for (frm, to), new_warnings in core.get_renames_with_warnings(
+            inps, fields, template, transform
+        ):
             ops.append((frm, to))
+            warnings.extend(new_warnings)
             if self._ready_for_signal():
                 self._emit_batch(ops, warnings)
                 sent += len(ops)
@@ -124,7 +134,7 @@ renames: sequence of rename operations, each `(source_path, destination_path)`
         if use > 0:
             self.widget.insertPlainText('\n'.join(
                 # NOTE: rename preview: source -> destination
-                _('{} → {}').format(repr(frm), repr(to))
+                _('{0} → {1}').format(repr(frm), repr(to))
                 for frm, to in renames[:use]
             ) + '\n')
             self._lines += use
@@ -145,17 +155,15 @@ class PreviewWarnings (widgets.Tab):
         # NOTE: & marks keyboard accelerator
         widgets.Tab.__init__(self, _('&Warnings'), qt.QTextEdit(),
                              'dialog-warning')
+        self.widget.setReadOnly(True)
+        self.widget.setLineWrapMode(qt.QTextEdit.NoWrap)
         self.warnings = {}
 
     def _update_display (self):
         # update text shown from self.warnings
         lines = []
         for category, warnings in self.warnings.items():
-            # NOTE: category line in warnings display; maybe the order should be
-            # switched for RTL languages
-            lines.append(_('{indent}{text}').format(
-                indent='&nbsp;' * 8, text='<b>{}</b>'.format(escape(category))
-            ))
+            lines.append('<b>{}</b>'.format(escape(category)))
             for detail in warnings['details']:
                 lines.append(escape(detail))
 
@@ -177,14 +185,14 @@ class PreviewWarnings (widgets.Tab):
 warnings: sequence of warnings, each `(category, detail)` strings
 
 """
-        for category, detail in warnings:
-            existing = self.warnings.setdefault(category,
-                                                {'details': [], 'extra': 0})
+        for warning in warnings:
+            existing = self.warnings.setdefault(
+                warning.category_name, {'details': [], 'extra': 0})
             if (existing['extra'] or
                 len(existing['details']) == conf.MAX_WARNINGS_PER_CATEGORY):
                 existing['extra'] += 1
             else:
-                existing['details'].append(detail)
+                existing['details'].append(warning.detail)
 
         if warnings:
             self._update_display()
@@ -196,6 +204,7 @@ warnings: sequence of warnings, each `(category, detail)` strings
         self.warnings = {}
         self.widget.setPlainText('')
         self.error = False
+        self.new = False
 
 
 class Preview (sync.UpdateController):

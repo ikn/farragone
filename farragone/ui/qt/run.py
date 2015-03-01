@@ -8,7 +8,7 @@ version."""
 
 from html import escape
 
-from ... import core
+from ... import core, util
 from . import qt, widgets
 
 
@@ -39,7 +39,7 @@ inputs: inp.Inputs
 when finished.
 
 """
-        inps, fields, transform, template, warnings = self._inputs.gather()
+        inps, fields, transform, template = self._inputs.gather()
         start_op = self.signals.start_op
         end_op = self.signals.end_op
 
@@ -50,7 +50,7 @@ when finished.
             try:
                 core.rename(frm, to)
             except OSError as e:
-                err = ', '.join(str(arg) for arg in e.args)
+                err = util.exc_str(e)
             else:
                 err = None
             end_op.emit(i, err is not None, err)

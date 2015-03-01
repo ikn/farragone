@@ -7,8 +7,8 @@ version."""
 
 import gettext
 
-from . import coreconf as _conf, core, ui
+from . import coreconf as _conf
 
 gettext.install(_conf.IDENTIFIER, _conf.PATH_LOCALE, names=('ngettext',))
 
-from . import conf, util
+from . import util, conf, core, ui

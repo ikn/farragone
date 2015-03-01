@@ -8,8 +8,11 @@ version."""
 import abc
 import itertools
 from collections import Counter
+import re
 from os import path as os_path
 import locale
+
+from .. import util
 
 
 class Context:
@@ -39,6 +42,15 @@ class Fields (metaclass=abc.ABCMeta):
         """Names of fields that could be returned by `evaluate`."""
         pass
 
+    @property
+    def warnings (self):
+        """List of util.Warn instances generated from the field source input."""
+        warnings = []
+        if not all(self.names):
+            warnings.append(
+                util.Warn('fields', _('empty field name ({})').format(self)))
+        return warnings
+
     @abc.abstractmethod
     def evaluate (self, paths):
         """Retrieve fields from paths.
@@ -59,9 +71,6 @@ class FieldCombination (Fields):
 retrieved individually.
 
 field_sets: any number of `Fields` instances to combine
-ignore_duplicate: if `False`, throw `ValueError` if any instances in
-                  `field_sets` may generate fields with the same name.  If
-                  `True`, later items in `field_sets` take precedence
 
 Attributes:
 
@@ -69,7 +78,7 @@ field_sets: normalised instances from the `field_sets` argument
 
 """
 
-    def __init__ (self, *field_sets, ignore_duplicate=False):
+    def __init__ (self, *field_sets):
         sets = []
 
         for fields in field_sets:
@@ -80,19 +89,24 @@ field_sets: normalised instances from the `field_sets` argument
 
         names = Counter(itertools.chain.from_iterable(
             fields.names for fields in sets))
-        if not ignore_duplicate:
-            extra_names = +(names - Counter(set(names)))
-            if extra_names:
-                raise ValueError(_(
-                    'cannot combine field sets: duplicate names: {}'
-                ).format(' '.join(map(repr, extra_names))))
-
         self._names = list(names.keys())
         self.field_sets = sets if sets else [NoFields()]
+
+        self._warnings = []
+        extra_names = +(names - Counter(set(names)))
+        if extra_names:
+            detail = _('duplicate field names: {}').format(
+                ', '.join(map(repr, extra_names)))
+            self._warnings.append(util.Warn('fields', detail))
 
     @property
     def names (self):
         return self._names
+
+    @property
+    def warnings (self):
+        # don't include Fields warnings, since each of field_sets will
+        return sum((f.warnings for f in self.field_sets), []) + self._warnings
 
     def evaluate (self, paths):
         path_iters = itertools.tee(paths, len(self.field_sets))
@@ -133,11 +147,31 @@ index: as passed to the constructor
 
     def __init__ (self, field_name, index=-1):
         self._name = field_name
-        self.index = int(index)
+        index_valid = True
+        try:
+            self.index = int(index)
+        except ValueError:
+            index_valid = False
+            self.index = -1
+
+        self._warnings = []
+        if not index_valid:
+            # NOTE: warning detail for invalid path component index
+            detail = _('index: {0}, field name: {1}').format(
+                repr(index), repr(self._name))
+            self._warnings.append(util.Warn('component index', detail))
+
+    def __str__ (self):
+        # NOTE: used to refer to a particular field source
+        return _('path component, field name: {}').format(repr(self._name))
 
     @property
     def names (self):
         return [self._name]
+
+    @property
+    def warnings (self):
+        return Fields.warnings.fget(self) + self._warnings
 
     def evaluate (self, paths):
         for path in paths:
@@ -154,9 +188,8 @@ index: as passed to the constructor
 class RegexGroups (Fields):
     """Retrieve fields from groups matched by a regular expression.
 
-pattern: compiled regular expression (returned by `re.compile`); not implicitly
-         anchored
-field_name_prefix: string giving the prefix for the field name for unname
+pattern: regular expression as a string; not implicitly anchored
+field_name_prefix: string giving the prefix for the field name for unnamed
                    groups
 context: defines which part of the path to match against
 
@@ -168,19 +201,55 @@ for paths not matching `pattern`.
 Attributes:
 
 pattern, context: as passed to the constructor
+regex: compiled regular expression
 
 """
 
     def __init__ (self, pattern, field_name_prefix, context=Context.NAME):
+        pattern_err = None
+        try:
+            regex = re.compile(pattern)
+        except re.error as e:
+            pattern_err = e
+            regex = re.compile('')
+
         self._field_name_prefix = field_name_prefix
-        self._names = (list(pattern.groupindex.keys()) +
-                       list(map(self._field_name, range(pattern.groups))))
+        names = (list(regex.groupindex.keys()) +
+                 list(map(self._field_name, range(regex.groups))))
+        self._names = set(names)
         self.pattern = pattern
+        self.regex = regex
         self.context = context
+
+        self._warnings = []
+
+        if pattern_err is not None:
+            # NOTE: warning detail for an invalid regular expression;
+            # placeholders are the pattern and the error message
+            self._warnings.append(util.Warn('regex', _('{0}: {1}').format(
+                repr(pattern), util.exc_str(pattern_err)
+            )))
+
+        extra_names = Counter(names) - Counter(set(names))
+        if extra_names:
+            # NOTE: warning detail for an invalid field source; placeholders are
+            # the duplicated field names and a description of the field source
+            detail = _(
+                'duplicate field names: {0} ({1})'
+            ).format(', '.join(map(repr, extra_names.keys())), self)
+            self._warnings.append(util.Warn('fields', detail))
+
+    def __str__ (self):
+        # NOTE: used to refer to a particular field source
+        return _('regular expression, pattern: {}').format(repr(self.pattern))
 
     @property
     def names (self):
         return self._names
+
+    @property
+    def warnings (self):
+        return Fields.warnings.fget(self) + self._warnings
 
     def _field_name (self, idx):
         # get the field name for a group by index
@@ -188,7 +257,7 @@ pattern, context: as passed to the constructor
 
     def evaluate (self, paths):
         for path in paths:
-            matches = self.pattern.finditer(self.context(path))
+            matches = self.regex.finditer(self.context(path))
             try:
                 match = next(matches)
             except StopIteration:
@@ -222,6 +291,10 @@ key, reverse, context: as passed to the constructor
         self.key = key
         self.reverse = reverse
         self.context = context
+
+    def __str__ (self):
+        # NOTE: used to refer to a particular field source
+        return _('ordering, field name: {}').format(repr(self._name))
 
     @property
     def names (self):

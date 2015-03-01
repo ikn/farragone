@@ -10,7 +10,7 @@ import re
 import locale
 from html import escape
 
-from ... import util, core
+from ... import util, conf, core
 from . import qt, widgets
 
 
@@ -162,7 +162,6 @@ Item states are dicts with 'input' being a `core.inputs.Input`.
 
 """
 
-    ident = 'files'
     # NOTE: UI section heading
     name = _('Files')
 
@@ -221,7 +220,6 @@ Item states are dicts with 'fields' being a `core.field.Fields`.
 
 """
 
-    ident = 'fields'
     # NOTE: UI section heading
     name = _('Fields')
 
@@ -260,11 +258,7 @@ Item states are dicts with 'fields' being a `core.field.Fields`.
     def _get_component_state (self, data):
         field_name = data['field_widget'].text()
         idx = data['index_widget'].text()
-        try:
-            fields = core.field.PathComponent(field_name, idx)
-        except ValueError:
-            fields = core.field.PathComponent(field_name)
-        return {'fields': fields}
+        return {'fields': core.field.PathComponent(field_name, idx)}
 
     def _new_component (self, changed):
         layout = qt.QHBoxLayout()
@@ -288,12 +282,9 @@ Item states are dicts with 'fields' being a `core.field.Fields`.
         }, 'item': layout, 'focus': idx}
 
     def _get_regex_state (self, data):
-        try:
-            regex = re.compile(data['text_widget'].text())
-        except re.error:
-            regex = re.compile('')
-        field_name = data['field_widget'].text()
-        return {'fields': core.field.RegexGroups(regex, field_name)}
+        return {'fields': core.field.RegexGroups(
+            data['text_widget'].text(), data['field_widget'].text()
+        )}
 
     def _new_regex (self, changed):
         layout = qt.QHBoxLayout()
@@ -308,7 +299,7 @@ Item states are dicts with 'fields' being a `core.field.Fields`.
         layout.addWidget(field, 1)
         # NOTE: default value for the field name for the 'Path Component' field
         # source
-        field.setText(_('name'))
+        field.setText(_('group'))
         field.setPlaceholderText(_('Field name'))
         field.textChanged.connect(changed)
 
@@ -357,7 +348,6 @@ Item states are dicts with 'fields' being a `core.field.Fields`.
 class FieldTransformsSection (Dynamic, Changing, qt.QVBoxLayout):
     """UI section for defining field transformations."""
 
-    ident = 'transforms'
     # NOTE: UI section heading
     name = _('Field Transforms')
 
@@ -410,7 +400,6 @@ template: `string.Template`
 
 """
 
-    ident = 'template'
     # NOTE: UI section heading
     name = _('Template')
 
@@ -481,12 +470,16 @@ inps: sequence of `core.inputs.Input`
 fields: `core.inputs.Fields`
 transform: fields transformation function
 template: `string.Template` for the output path
-warnings: sequence of warnings, each `(category, detail)` strings
 
 """
         inps = [f['state']['input'] for f in self.files.items]
-        field_sets = (f['state']['fields'] for f in self.fields.items)
-        fields = core.field.FieldCombination(*field_sets, ignore_duplicate=True)
+
+        field_sets = []
+        for f in self.fields.items:
+            field_sets.append(f['state']['fields'])
+        fields = core.field.FieldCombination(*field_sets)
+
         transform = lambda f: f
         template = self.template.template
-        return (inps, fields, transform, template, [])
+
+        return (inps, fields, transform, template)
