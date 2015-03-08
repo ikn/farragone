@@ -62,6 +62,7 @@ class Run (qt.QVBoxLayout):
     """Button to do the rename, and display current status.
 
 inputs: inp.Input
+preview: preview.Preview
 
 Attributes;
 
@@ -77,7 +78,7 @@ failed: list of error strings for the current/previous run
     started = qt.pyqtSignal()
     stopped = qt.pyqtSignal()
 
-    def __init__ (self, inputs):
+    def __init__ (self, inputs, preview):
         qt.QHBoxLayout.__init__(self)
         self._run_btn = widgets.mk_button(qt.QPushButton, {
             # NOTE: & marks the keyboard accelerator
@@ -92,7 +93,9 @@ failed: list of error strings for the current/previous run
         self.status.setWordWrap(False)
 
         self._inputs = inputs
+        self._preview = preview
         # not thread-safe, but we only modify it in the main thread
+        # True while waiting for preview, RenameThread while running
         self.running = None
         self._has_run = False
         self.current_operation = None
@@ -146,11 +149,14 @@ failed: list of error strings for the current/previous run
 
     def update_status (self):
         """Update display with the current status."""
-        if self.running or self._has_run:
+        if self.running is True:
+            # NOTE: status line
+            self.status.setText('<i>{}</i>'.format(_('preparing...')))
+        elif self.running or self._has_run:
             self.status.setText(self.status_text())
-            self.status.show()
         else:
-            self.status.hide()
+            # NOTE: status line
+            self.status.setText('<i>{}</i>'.format(_('idle')))
 
     def start_op (self, ident, frm, to):
         """Signal that a rename operation has started.
@@ -184,11 +190,25 @@ error: string error message
             self.stopped.emit()
             self._run_btn.setEnabled(True)
 
-    def run (self):
-        """Perform the rename operation."""
-        if not self.running:
-            self._run_btn.setEnabled(False)
-            self.started.emit()
+    def _continue_run (self):
+        """Continuation of `run` - called once a preview is ready."""
+        do_run = True
+
+        if self._preview.warnings.warnings:
+            response = widgets.question(_(
+                'Your settings have generated some warnings ({} total).  '
+                'Check the \'Warnings\' tab for details.'
+            ).format(self._preview.warnings.warnings.total), [
+                # NOTE: button label in confirmation dialogue
+                (_('&Run Anyway'), 'media-playback-start',
+                 qt.QMessageBox.AcceptRole),
+                qt.QMessageBox.Cancel
+            ], default=1, warning=True, ask_again=('run with warnings', 0))
+
+            if response == 1:
+                do_run = False
+
+        if do_run:
             self.running = RenameThread(self._inputs)
             self.current_operation = None
             self.failed = []
@@ -199,3 +219,16 @@ error: string error message
             qt.QThreadPool.globalInstance().start(self.running)
             self._has_run = True
             self.update_status()
+
+        else:
+            self._end()
+
+    def run (self):
+        """Perform the rename operation."""
+        if not self.running:
+            self.running = True
+            self._run_btn.setEnabled(False)
+            self.started.emit()
+            self.update_status()
+            # wait for preview to finish so we can check for warnings
+            self._preview.wait(self._continue_run)

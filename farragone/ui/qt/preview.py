@@ -7,7 +7,6 @@ Foundation, either version 3 of the License, or (at your option) any later
 version."""
 
 from time import time
-from html import escape
 
 from ... import core
 from ... import conf, util
@@ -29,7 +28,7 @@ the UI.
 
     # [(path_from, path_to), ...]
     operation_batch = qt.pyqtSignal(list)
-    # [(category, detail), ...]
+    # [util.Warning, ...]
     warning_batch = qt.pyqtSignal(list)
 
     def __init__ (self, inputs, thread):
@@ -120,7 +119,7 @@ Respects conf.MAX_PREVIEW_LENGTH.
         widgets.Tab.__init__(self, _('&Preview'), qt.QTextEdit())
         self.widget.setReadOnly(True)
         self.widget.setLineWrapMode(qt.QTextEdit.NoWrap)
-        self._lines = 0
+        self.reset()
 
     def add (self, renames):
         """Show some more renames.
@@ -132,20 +131,21 @@ renames: sequence of rename operations, each `(source_path, destination_path)`
         space = conf.MAX_PREVIEW_LENGTH - self._lines
         use = min(space, got)
         if use > 0:
-            self.widget.insertPlainText('\n'.join(
-                # NOTE: rename preview: source -> destination
-                _('{0} → {1}').format(repr(frm), repr(to))
+            self.widget.insertPlainText(
+                '\n'.join(core.preview_rename(frm, to)
                 for frm, to in renames[:use]
             ) + '\n')
             self._lines += use
-        if got > space:
+        if got > space and not self._preview_abbreviated:
             self.widget.insertPlainText('...\n')
             self._lines += 1
+            self._preview_abbreviated = True
 
     def reset (self):
         """Prepare for a new preview."""
         self.widget.setPlainText('')
         self._lines = 0
+        self._preview_abbreviated = False
 
 
 class PreviewWarnings (widgets.Tab):
@@ -157,27 +157,11 @@ class PreviewWarnings (widgets.Tab):
                              'dialog-warning')
         self.widget.setReadOnly(True)
         self.widget.setLineWrapMode(qt.QTextEdit.NoWrap)
-        self.warnings = {}
+        self.reset()
 
     def _update_display (self):
         # update text shown from self.warnings
-        lines = []
-        for category, warnings in self.warnings.items():
-            lines.append('<b>{}</b>'.format(escape(category)))
-            for detail in warnings['details']:
-                lines.append(escape(detail))
-
-            extra = warnings['extra']
-            if extra:
-                # NOTE: for warnings display, where there are extra warnings in
-                # a category not displayed; placeholder is how many of these
-                # there are
-                text = ngettext('(and {} more)', '(and {} more)', extra)
-                lines.append('<i>{}</i>'.format(text.format(extra)))
-
-            # gap between each category
-            lines.append('')
-        self.widget.setHtml('<br>'.join(lines))
+        self.widget.setHtml(self.warnings.render('html'))
 
     def add (self, warnings):
         """Show some more warnings.
@@ -186,14 +170,7 @@ warnings: sequence of warnings, each `(category, detail)` strings
 
 """
         for warning in warnings:
-            existing = self.warnings.setdefault(
-                warning.category_name, {'details': [], 'extra': 0})
-            if (existing['extra'] or
-                len(existing['details']) == conf.MAX_WARNINGS_PER_CATEGORY):
-                existing['extra'] += 1
-            else:
-                existing['details'].append(warning.detail)
-
+            self.warnings.add(warning)
         if warnings:
             self._update_display()
             self.error = True
@@ -201,7 +178,7 @@ warnings: sequence of warnings, each `(category, detail)` strings
 
     def reset (self):
         """Prepare for a new preview."""
-        self.warnings = {}
+        self.warnings = util.Warnings()
         self.widget.setPlainText('')
         self.error = False
         self.new = False

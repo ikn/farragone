@@ -338,3 +338,116 @@ tab: Tab.
 """
         self.widget.addTab(tab.widget, tab.name)
         self._init_new_tab(tab)
+
+
+def question (msg, btns, parent=None, default=None, warning=False,
+              ask_again=None):
+    """Show a dialogue asking a question.
+
+question(msg, btns[, parent][, default], warning=False[, ask_again])
+    -> response
+
+msg: text to display; just a string or (primary, secondary).
+btns: a list of actions to present as buttons, where each is a
+      QMessageBox.StandardButton, or (text[, icon], role) where:
+    text: button text (with '&' accelerator marker)
+    icon: freedesktop icon name
+    role: QMessageBox.ButtonRole
+parent: dialogue parent.
+default: the index of the button in btns that should be selected by default.
+         If None or not given, there is no default.
+warning: whether this is a warning dialogue (instead of just a question).
+ask_again: show a 'Don't ask again' checkbox.  This is
+           `(setting_key, match_response)`, such that if the checkbox is ticked
+           and `response` is `match_response`, `setting_key` is added to the
+           'disabled_warnings' setting.
+
+response: The index of the selected button in btns.
+
+"""
+    if ask_again is not None and ask_again[0] in settings['disabled_warnings']:
+        return ask_again[1]
+
+    if isinstance(msg, str):
+        msg = (msg,)
+    d = qt.QMessageBox(parent)
+    d.setIcon(qt.QMessageBox.Warning if warning else qt.QMessageBox.Question)
+    d.setTextFormat(qt.Qt.PlainText)
+    d.setText(msg[0])
+    if len(msg) >= 2:
+        d.setInformativeText(msg[1])
+
+    def fail_ask_again ():
+        util.warn(_('hacky implementation of \'ask again\' found unexpected '
+                    'dialogue layout; refusing to continue'))
+        nonlocal ask_again
+        ask_again = None
+
+
+    # add checkbox (HACK)
+    grid = d.layout()
+    num_cols = 3
+    num_rows = 3
+    checkbox_col = 2
+    checkbox_row = (num_rows - 1) if len(msg) >= 2 else (num_rows - 2)
+
+    if ask_again is not None:
+        # check it'll still work in this version of qt
+        if (not isinstance(grid, qt.QGridLayout) or
+            grid.columnCount() != num_cols or grid.rowCount() != num_rows):
+            fail_ask_again()
+
+
+    if ask_again is not None and checkbox_row == num_rows - 1:
+        # move buttons down to make a row for the checkbox
+        to_add = []
+        from_row = checkbox_row
+        to_row = from_row + 1
+
+        for col in range(3):
+            w = grid.itemAtPosition(from_row, col)
+            if isinstance(w, qt.QWidgetItem):
+                to_add.append((col, w))
+            elif w is not None:
+                # don't know what to do with this
+                fail_ask_again()
+                break
+
+        if ask_again is not None:
+            for col, w in to_add:
+                grid.addWidget(w.widget(), to_row, col)
+
+    if ask_again is not None:
+        c = qt.QCheckBox(_('&Don\'t ask again'))
+        grid.addWidget(c, checkbox_row, checkbox_col)
+
+
+    response_map = {}
+    for i, data in enumerate(btns):
+        if isinstance(data, (tuple, list)):
+            # (text[, icon], role)
+            btn = qt.QPushButton(data[0])
+            if len(data) == 3:
+                btn.setIcon(qt.QIcon.fromTheme(data[1]))
+            add_args = (btn, data[-1])
+        else:
+            # standard button
+            add_args = (data,)
+
+        btn = d.addButton(*add_args) or btn
+        response_map[btn] = i
+        if i == default:
+            d.setDefaultButton(btn)
+        # disable auto-default for every button, so that default=None works
+        btn.setAutoDefault(False)
+
+    d.exec()
+    response = response_map[d.clickedButton()]
+
+    if ask_again is not None:
+        # handle checkbox value
+        setting_key, match_response = ask_again
+        if c.isChecked() and response == match_response:
+            settings['disabled_warnings'] |= {setting_key}
+
+    return response

@@ -59,6 +59,7 @@ thread: QThread in which `run` is called
         self.thread.finished.connect(self._thread_finished)
         self._queued = False
         self._exited = False
+        self._finish_cbs = []
 
     def _start_thread (self):
         # actually reset and start the thread working
@@ -70,6 +71,11 @@ thread: QThread in which `run` is called
     def _thread_finished (self):
         # called when the thread finishes working
         self._log('FG signal finished')
+
+        for cb in self._finish_cbs:
+            cb()
+        self._finish_cbs = []
+
         if self._queued:
             # we interrupted the thread - start it again
             self._log('FG starting')
@@ -108,3 +114,21 @@ be called at any time, but only ever in a single thread.
         """Stop any current and all future update jobs."""
         self._exited = True
         self.thread.requestInterruption()
+
+    def wait (self, callback):
+        """Wait for an update to finish.
+
+callback: called once, when an update has finished (may have already happened),
+          before any subsequent update starts
+
+"""
+        do_call = False
+        self.thread.working_lock.lock()
+        if self.thread.working:
+            self._finish_cbs.append(callback)
+        else:
+            do_call = True
+        self.thread.working_lock.unlock()
+        # call outside of lock to avoid possible deadlocks
+        if do_call:
+            callback()

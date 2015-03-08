@@ -14,6 +14,12 @@ from .. import util, conf
 from . import inputs, field
 
 
+def preview_rename (frm, to):
+    """Return a string displaying a rename operation."""
+    # NOTE: rename preview: source -> destination
+    return _('{0} → {1}').format(repr(frm), repr(to))
+
+
 def _get_abs_path (path, cwd=None):
     """Make a path absolute.
 
@@ -164,7 +170,7 @@ is a sequence of util.Warn instances (empty if `with_warnings` is False).
         yield (path, _get_abs_path(dest_path, cwd), warnings)
 
 
-def get_renames (inps, *args, **kwargs):
+def get_renames (*args, **kwargs):
     """Get files to rename and destination paths.
 
 inps: sequence of `inputs.Input` to retrieve paths from
@@ -242,11 +248,9 @@ by `get_renames` and `warnings` is a sequence of util.Warn instances.
                 util.Warn('dest', '{0}: {1}'.format(repr(to), detail)))
 
         if os.path.exists(to):
-            warnings.append(util.Warn('dest exists', repr(to)))
+            warnings.append(util.Warn('dest exists', preview_rename(frm, to)))
 
         if path_device(frm) != path_device(to):
-            warnings.append(util.Warn('cross device',
-                # NOTE: rename preview: source -> destination
-                _('{0} → {1}').format(repr(frm), repr(to))))
+            warnings.append(util.Warn('cross device', preview_rename(frm, to)))
 
         yield ((frm, to), warnings)

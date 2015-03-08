@@ -32,7 +32,7 @@ class Window (widgets.Window):
         inputs = inp.Input(self._update_tab_order, changed)
         self.output = out = output.Output(inputs)
 
-        runner = run.Run(inputs)
+        runner = run.Run(inputs, out.preview)
         runner.started.connect(lambda: self.lock('run'))
         runner.stopped.connect(self._run_stopped)
 

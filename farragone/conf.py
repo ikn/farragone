@@ -20,15 +20,28 @@ for d in (PATH_CONF_WRITE,):
         util.warn(_('failed creating directory: {}:').format(repr(d)), e)
 
 
+class _JSONEncoder (json.JSONEncoder):
+    """Extended json.JSONEncoder with support for any iterable."""
+
+    def default (self, o):
+        if hasattr(o, '__iter__'):
+            return list(o)
+        else:
+            return json.JSONEncoder.default(self, o)
+
+
 class Settings (dict):
     """`dict`-like settings storage with JSON file backend.
 
 load_fns: filenames to load from
 save_fn: filename to save to
-defn: `dict` with keys being available setting names and values being `dict`s:
-      { 'default': default, 'validate': validate }.  `default` is the default
-      value and `validate` is a function taking a new value for the setting and
-      returning a boolean indicating whether it's valid.
+defn: `dict` with keys being available setting names and values being `dict`s
+      with keys:
+    default: the default value
+    validate: a function taking a new value for the setting and returning a
+              boolean indicating whether it's valid
+    cast: a function taking a new value for the setting and returning the value
+          to actually use (optional) (called after `validate`)
 
 Use the `dict` interface to set and retrieve values; delete to reset to the
 default value.  These operations raise `KeyError` for settings not in `defn`.
@@ -39,12 +52,12 @@ default value.  These operations raise `KeyError` for settings not in `defn`.
         self.filename = save_fn
         self.definition = defn
 
-        self.update({key: item_defn['default']
-                     for key, item_defn in defn.items()})
+        for key, item_defn in defn.items():
+            self[key] = item_defn['default']
         for fn in load_fns:
             overrides = self._load(fn)
-            self.update({key: value for key, value in overrides.items()
-                         if key in defn})
+            for key, value in overrides.items():
+                self[key] = value
 
     def _load (self, fn):
         # load settings from disk
@@ -69,7 +82,7 @@ default value.  These operations raise `KeyError` for settings not in `defn`.
         tmp_fn = fn + '.tmp'
         os.makedirs(os.path.dirname(fn), exist_ok=True)
         with open(tmp_fn, 'w') as f:
-            json.dump(self, f)
+            json.dump(self, f, cls=_JSONEncoder)
         # can't rename if destination exists in Windows
         try:
             os.remove(fn)
@@ -78,9 +91,11 @@ default value.  These operations raise `KeyError` for settings not in `defn`.
         os.rename(tmp_fn, fn)
 
     def __setitem__ (self, key, value):
+        print('set', key, value)
         if key in self.definition:
             if not self.definition[key]['validate'](value):
                 raise TypeError(value)
+            value = self.definition[key].get('cast', lambda x: x)(value)
 
             dict.__setitem__(self, key, value)
             try:
@@ -129,6 +144,11 @@ settings = Settings(
         'splitter_ratio_main': {
             'default': .5,
             'validate': lambda x: isinstance(x, (int, float)) and 0 <= x <= 1
+        },
+        'disabled_warnings': {
+            'default': set(),
+            'validate': lambda x: hasattr(x, '__iter__'),
+            'cast': lambda x: set(x)
         }
     }
 )

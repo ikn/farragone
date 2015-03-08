@@ -6,7 +6,9 @@ Foundation, either version 3 of the License, or (at your option) any later
 version."""
 
 import sys
+import itertools
 from time import time
+from html import escape
 
 from . import coreconf as conf
 
@@ -76,14 +78,115 @@ def exc_str (e):
 
 
 class Warn:
+    """A warning generated from the rename configuration.
+
+category: string from `WARNING_CAT` keys
+detail: string giving more information
+
+"""
+
     def __init__ (self, category, detail):
         self.category = category
         self.detail = detail
 
-    @property
-    def category_name (self):
-        return WARNING_CAT[self.category]
-
     @staticmethod
     def from_exc (category, exception):
+        """Create a `Warn` instance from an exception.
+
+category: as taken by the constructor
+exception: `Exception` instance
+
+"""
         return Warn(category, exc_str(exception))
+
+
+class Warnings (dict):
+    """A collection of `Warn` instances.
+
+max_per_category: maximum number of warnings to store per category
+
+Indexing by category returns a sequence of `Warn` instances stored for that
+category.
+
+Truthy if it contains any warnings.
+
+"""
+
+    def __init__ (self, max_per_category=conf.MAX_WARNINGS_PER_CATEGORY):
+        self.max_per_category = max_per_category
+        self._warnings = {}
+
+    def __bool__ (self):
+        return bool(self._warnings)
+
+    def __getitem__ (self, category):
+        return self._warnings[category]['details']
+
+    @property
+    def categories (self):
+        """Return an iterator over categories."""
+        return self._warnings.keys()
+
+    @property
+    def warnings (self):
+        """Return an iterator over all stored warnings."""
+        return itertools.chain.from_iterable(self._warnings.values())
+
+    def count (self, category):
+        """Return the number of warnings added for the given category (not just
+stored warnings."""
+        warnings = self._warnings[category]
+        return len(warnings['details']) + warnings['extra']
+
+    @property
+    def total (self):
+        """Return the total number of warnings added (not just stored
+warnings)."""
+        return sum(map(self.count, self.categories))
+
+    def add (self, warning):
+        """Add a warning (`Warn` instance)."""
+        existing = self._warnings.setdefault(
+            warning.category, {'details': [], 'extra': 0})
+
+        if (existing['extra'] or
+            len(existing['details']) == conf.MAX_WARNINGS_PER_CATEGORY):
+            existing['extra'] += 1
+        else:
+            existing['details'].append(warning.detail)
+
+    def _render_html (self):
+        """Render HTML output."""
+        lines = []
+        for category, warnings in self._warnings.items():
+            lines.append('<b>{}</b>'.format(escape(WARNING_CAT[category])))
+            for detail in warnings['details']:
+                lines.append(escape(detail))
+
+            extra = warnings['extra']
+            if extra:
+                # NOTE: for warnings display, where there are extra warnings in
+                # a category not displayed; placeholder is how many of these
+                # there are
+                text = ngettext('(and {} more)', '(and {} more)', extra)
+                lines.append('<i>{}</i>'.format(text.format(extra)))
+
+            # gap between each category
+            lines.append('')
+        return '<br>'.join(lines)
+
+    def render (self, fmt='html'):
+        """Return a representation of the added warnings in a particular format.
+
+fmt: format to use; allowed values are:
+    'html': HTML (non-semantic)
+
+"""
+        render = {
+            'html': self._render_html
+        }.get(fmt)
+
+        if render is None:
+            raise ValueError('unknown render format', fmt)
+        else:
+            return render()
