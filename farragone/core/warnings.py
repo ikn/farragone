@@ -112,7 +112,8 @@ Should only be called once for each rename.
     return warnings
 
 
-def _get_renames_with_warnings (con, warnings, *args, **kwargs):
+def _get_renames_with_warnings (con, warnings, inps, fields, template, *args,
+                                **kwargs):
     """Like `get` returned by `get_renames_with_warnings`.
 
 con: database connection (possibly `None`)
@@ -123,7 +124,16 @@ Other arguments are as taken by `get`.
 """
     warnings = list(warnings)
 
-    for frm, to, new_warnings in rename._get_renames(True, *args, **kwargs):
+    try:
+        template.substitute()
+    except ValueError as e:
+        warnings.append(util.Warn('template', util.exc_str(e)))
+    except KeyError:
+        pass
+
+    for frm, to, new_warnings in rename._get_renames(
+        True, inps, fields, template, *args, **kwargs
+    ):
         warnings.extend(new_warnings)
 
         if not os.path.exists(frm):
