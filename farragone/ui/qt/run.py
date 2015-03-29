@@ -43,12 +43,12 @@ when finished.
         start_op = self.signals.start_op
         end_op = self.signals.end_op
 
-        for i, (frm, to) in enumerate(core.get_renames(
+        for i, (frm, to) in enumerate(core.rename.get_renames(
             inps, fields, template, transform
         )):
             start_op.emit(i, frm, to)
             try:
-                core.rename(frm, to)
+                core.rename.rename(frm, to)
             except OSError as e:
                 err = util.exc_str(e)
             else:

@@ -1,4 +1,3 @@
-# coding=utf-8
 """Farragone Qt UI preview system.
 
 This program is free software: you can redistribute it and/or modify it under
@@ -81,9 +80,8 @@ each checked rename.
         except KeyError:
             pass
 
-        for (frm, to), new_warnings in core.get_renames_with_warnings(
-            inps, fields, template, transform
-        ):
+        get, done = core.warnings.get_renames_with_warnings()
+        for (frm, to), new_warnings in get(inps, fields, template, transform):
             ops.append((frm, to))
             warnings.extend(new_warnings)
             if self._ready_for_signal():
@@ -96,6 +94,7 @@ each checked rename.
                 log('BG interrupt')
                 interrupted = True
                 break
+        done()
 
         # emit unfinished batch
         if not interrupted:
@@ -132,7 +131,7 @@ renames: sequence of rename operations, each `(source_path, destination_path)`
         use = min(space, got)
         if use > 0:
             self.widget.insertPlainText(
-                '\n'.join(core.preview_rename(frm, to)
+                '\n'.join(core.rename.preview_rename(frm, to)
                 for frm, to in renames[:use]
             ) + '\n')
             self._lines += use

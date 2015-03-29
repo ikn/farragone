@@ -14,19 +14,27 @@ from . import coreconf as conf
 
 # displayed category names for warnings
 WARNING_CAT = {
+    'unknown': _('computing warnings failed'),
+
     'fields': _('fields'),
     'regex': _('invalid regular expression'),
     'component index': _('path component index must be an integer'),
     'template': _('invalid template'),
 
-    # NOTE: 'source' as in source/destination
     'unresolved fields': _('fields are used but don\'t exist'),
+    # NOTE: 'source' as in source/destination
     'source': _('invalid source file'),
     'dest': _('destination path is invalid'),
     'dest exists': _('destination file already exists'),
     'cross device': _(
         'source and destination on different disks (renaming will be slow)'
     ),
+
+    # NOTE: 'source' as in source/destination
+    'dup source': _('same source path specified twice'),
+    'dup dest': _('same destination path specified twice'),
+    # NOTE: 'source' as in source/destination
+    'source parent': _('one source path is a parent of another')
 }
 
 
