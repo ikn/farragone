@@ -34,7 +34,7 @@ def path_device (path):
     while True:
         try:
             dev = os.stat(path, follow_symlinks=False).st_dev
-        except FileNotFoundError:
+        except (FileNotFoundError, NotADirectoryError):
             new_path = os.path.dirname(path)
             if new_path == path:
                 dev = None
