@@ -28,24 +28,58 @@ Returns a string with the reason for the path being invalid, or None.
             )
 
 
+def parents (path, include_full=False):
+    """Get parents of a path.
+
+path: path to get all parents of
+include_full: whether to also get `path` itself
+
+Returns an iterator over parent paths.  The iterator is never empty - if `path`
+is root, we yield `path`.  The order is children before parents.
+
+"""
+    found = False
+    if include_full:
+        yield path
+        found = True
+
+    while True:
+        new_path = os.path.dirname(path)
+        if new_path == path:
+            if not found:
+                yield path
+            break
+        else:
+            yield new_path
+            found = True
+            path = new_path
+
+
 def path_device (path):
     """Determine the device containing the given path."""
     dev = None
-    while True:
+    for parent in parents(path, True):
         try:
-            dev = os.stat(path, follow_symlinks=False).st_dev
+            dev = os.stat(parent, follow_symlinks=False).st_dev
         except (FileNotFoundError, NotADirectoryError):
-            new_path = os.path.dirname(path)
-            if new_path == path:
-                dev = None
-                break
-            else:
-                path = new_path
+            pass
         except OSError:
             break
         else:
             break
     return dev
+
+
+def path_nearest_parent (path):
+    """Get the nearest existing parent of the given path."""
+    nearest_parent = None
+    for parent in parents(path):
+        if os.path.exists(parent):
+            nearest_parent = parent
+            break
+    # in case os.path.exists gives False for root for some reason, use the last
+    # parent we found
+    return parent if nearest_parent is None else nearest_parent
 
 
 def _check_same_warning (cat, existing_rename, new_rename):
@@ -138,6 +172,8 @@ Other arguments are as taken by `get`.
 
         if not os.path.exists(frm):
             warnings.append(util.Warn('source', repr(frm)))
+        elif not os.access(frm, os.R_OK, follow_symlinks=False):
+            warnings.append(util.Warn('source perm', repr(frm)))
 
         detail = path_invalid(to)
         if detail is not None:
@@ -149,6 +185,14 @@ Other arguments are as taken by `get`.
         if os.path.exists(to):
             warnings.append(
                 util.Warn('dest exists', rename.preview_rename(frm, to)))
+        else:
+            to_nearest_parent = path_nearest_parent(to)
+            if (
+                # can't write to subdirs of files
+                not os.path.isdir(to_nearest_parent) or
+                not os.access(to_nearest_parent, os.W_OK, follow_symlinks=False)
+            ):
+                warnings.append(util.Warn('dest perm', repr(to)))
 
         if path_device(frm) != path_device(to):
             warnings.append(

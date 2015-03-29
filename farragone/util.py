@@ -23,9 +23,11 @@ WARNING_CAT = {
 
     'unresolved fields': _('fields are used but don\'t exist'),
     # NOTE: 'source' as in source/destination
-    'source': _('invalid source file'),
+    'source': _('missing source file'),
+    'source perm': _('cannot read from source file'),
     'dest': _('destination path is invalid'),
     'dest exists': _('destination file already exists'),
+    'dest perm': _('cannot write to destination file'),
     'cross device': _(
         'source and destination on different disks (renaming will be slow)'
     ),
