@@ -75,6 +75,7 @@ field_sets: any number of `Fields` instances to combine
 Attributes:
 
 field_sets: normalised instances from the `field_sets` argument
+duplicate_names: `set` of field names occuring more than once
 
 """
 
@@ -93,10 +94,10 @@ field_sets: normalised instances from the `field_sets` argument
         self.field_sets = sets if sets else [NoFields()]
 
         self._warnings = []
-        extra_names = +(names - Counter(set(names)))
-        if extra_names:
+        self.duplicate_names = frozenset(+(names - Counter(set(names))))
+        if self.duplicate_names:
             detail = _('duplicate field names: {}').format(
-                ', '.join(map(repr, extra_names)))
+                ', '.join(map(repr, self.duplicate_names)))
             self._warnings.append(util.Warn('fields', detail))
 
     @property

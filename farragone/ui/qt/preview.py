@@ -6,6 +6,7 @@ Foundation, either version 3 of the License, or (at your option) any later
 version."""
 
 from time import time
+from html import escape
 
 from ... import core
 from ... import conf, util
@@ -176,6 +177,40 @@ warnings: sequence of warnings, each `(category, detail)` strings
         self.new = False
 
 
+class PreviewFields (widgets.Tab):
+    """Show all specified fields and their sources.
+
+inputs: `inp.Input`
+
+"""
+
+    def __init__ (self, inputs):
+        # NOTE: & marks keyboard accelerator
+        widgets.Tab.__init__(self, _('&Fields'), qt.QTextEdit())
+        self.widget.setReadOnly(True)
+        self.widget.setLineWrapMode(qt.QTextEdit.NoWrap)
+        self._inputs = inputs
+
+    def update (self):
+        """Update display from current settings."""
+        lines = []
+        field_sets, all_fields = self._inputs.gather_fields()
+        dup_names = all_fields.duplicate_names
+
+        for fields in field_sets:
+            source = str(fields)
+            for name in fields.names:
+                rendered_name = (
+                    '<font color="red">{}</font>' if name in dup_names else '{}'
+                ).format(escape(name))
+                # NOTE: TODO
+                lines.append(_(
+                    '{0} <font color="grey">({1})</font>'
+                ).format(rendered_name, source))
+
+        self.widget.setHtml('<br>'.join(lines))
+
+
 class Preview (sync.UpdateController):
     """Manages preview widgets - renames and warnings.
 
@@ -191,6 +226,7 @@ warnings: PreviewWarnings
     def __init__ (self, inputs):
         self.renames = PreviewRenames()
         self.warnings = PreviewWarnings()
+        self.fields = PreviewFields(inputs)
 
         def run ():
             self._preview.run()
@@ -214,3 +250,8 @@ warnings: PreviewWarnings
         """Prepare for a new preview."""
         self.renames.reset()
         self.warnings.reset()
+
+    def update (self):
+        """Update display from current settings."""
+        self.fields.update()
+        sync.UpdateController.update(self)

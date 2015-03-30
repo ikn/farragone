@@ -1,5 +1,7 @@
 0.1.2-next:
- * tabbed output section with warnings tab
+ * tabbed output section
+ * warnings tab in output section
+ * fields tab in output section
  * ask for confirmation when running if there are problems (warnings)
  * support XDG paths
 

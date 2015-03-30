@@ -461,6 +461,20 @@ template: TemplateSection
         group.setLayout(section)
         self._layout.addWidget(group)
 
+    def gather_fields (self):
+        """Return data about fields specified.
+
+Returns `(field_sets, all_fields)`, where:
+
+field_sets: sequence of `core.inputs.Fields`
+all_fields: `core.inputs.FieldCombination` containing all fields in `field_sets`
+
+"""
+        field_sets = []
+        for f in self.fields.items:
+            field_sets.append(f['state']['fields'])
+        return (field_sets, core.field.FieldCombination(*field_sets))
+
     def gather (self):
         """Return data defining the renaming scheme.
 
@@ -473,13 +487,7 @@ template: `string.Template` for the output path
 
 """
         inps = [f['state']['input'] for f in self.files.items]
-
-        field_sets = []
-        for f in self.fields.items:
-            field_sets.append(f['state']['fields'])
-        fields = core.field.FieldCombination(*field_sets)
-
+        fields = self.gather_fields()[1]
         transform = lambda f: f
         template = self.template.template
-
         return (inps, fields, transform, template)
