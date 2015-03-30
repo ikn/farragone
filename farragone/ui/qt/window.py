@@ -70,9 +70,10 @@ class Window (widgets.Window):
         # release a close prevention lock
         self._locked[ident] -= 1
 
-    def _run_stopped (self):
+    def _run_stopped (self, started):
         self.release('run')
-        self.output.update()
+        if started:
+            self.output.update()
 
     def closeEvent (self, evt):
         try:

@@ -71,14 +71,7 @@ each checked rename.
         interrupted = False
         sent = 0
         ops = []
-
         warnings = list(fields.warnings)
-        try:
-            template.substitute()
-        except ValueError as e:
-            warnings.append(util.Warn('template', util.exc_str(e)))
-        except KeyError:
-            pass
 
         get, done = core.warnings.get_renames_with_warnings()
         for (frm, to), new_warnings in get(inps, fields, template, transform):
