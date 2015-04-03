@@ -9,6 +9,8 @@ from os.path import join as join_path
 import glob
 import sqlite3
 
+from . import rename
+
 # thrown by all methods
 Error = sqlite3.Error
 
@@ -29,30 +31,21 @@ The query selects the `frm` and `to` columns for at most one record.
 
 # queries by identifier
 _QUERIES = {
-    'create': ('''CREATE TABLE {} (
-        `frm` TEXT, `to` TEXT, `cmp_frm` TEXT, `cmp_to` TEXT,
-        `frm_child_pattern` TEXT
-    )''').format(_tbl),
+    'create': ('''
+CREATE TABLE {tbl} (`frm` TEXT, `to` TEXT, `cmp_frm` TEXT, `cmp_to` TEXT);
+CREATE INDEX `cmp_frm` ON {tbl} (`cmp_frm`);
+CREATE INDEX `cmp_to` ON {tbl} (`cmp_to`);
+    ''').format(tbl=_tbl),
 
     'drop': 'DROP TABLE {}'.format(_tbl),
-    'add': '''INSERT INTO {} VALUES (
-        :frm, :to, :cmp_frm, :cmp_to, :frm_child_pattern
-    )'''.format(_tbl),
+    'add': 'INSERT INTO {} VALUES (:frm, :to, :cmp_frm, :cmp_to)'.format(_tbl),
 
     'find frm': _mk_select('`cmp_frm` = ?'),
     'find to': _mk_select('`cmp_to` = ?'),
-    'find frm parent': _mk_select('? GLOB `frm_child_pattern`'),
-    'find frm child': _mk_select('`cmp_frm` GLOB ?')
+    # collation defaults to BINARY, so these comparisons are case-insensitive
+    'find frm parent': _mk_select('`cmp_frm` IN ({parents})'),
+    'find frm child': _mk_select('? < `cmp_frm` AND `cmp_frm` < ?')
 }
-
-
-def _child_pattern (cmp_parent):
-    """Return a glob pattern that matches children of a path.
-
-cmp_parent: comparable path to match children of
-
-"""
-    return glob.escape(join_path(cmp_parent, '')) + '?*'
 
 
 def _exec (con, qry_id, params=()):
@@ -70,6 +63,15 @@ Returns the cursor used to execute the query.
     return cursor
 
 
+def _setup (con):
+    """Initialise the database tables.
+
+con: database connection.
+
+"""
+    con.executescript(_QUERIES['create'])
+
+
 def create ():
     """Create and initialise a temporary renames database.
 
@@ -79,7 +81,7 @@ Returns a database connection.
     # stored in memory or temp file, depending on available memory
     # https://www.sqlite.org/inmemorydb.html
     con = sqlite3.connect('')
-    _exec(con, 'create')
+    _setup(con)
     return con
 
 
@@ -90,7 +92,7 @@ con: database connection
 
 """
     _exec(con, 'drop')
-    _exec(con, 'create')
+    _setup(con)
 
 
 def add (con, frm, to, cmp_frm, cmp_to):
@@ -104,8 +106,7 @@ cmp_to: comparable version of `to`
 
 """
     _exec(con, 'add', {
-        'frm': frm, 'to': to, 'cmp_frm': cmp_frm, 'cmp_to': cmp_to,
-        'frm_child_pattern': _child_pattern(cmp_frm)
+        'frm': frm, 'to': to, 'cmp_frm': cmp_frm, 'cmp_to': cmp_to
     })
 
 
@@ -117,11 +118,7 @@ con, qry_id, params: as taken by `_exec`
 Returns a database record or `None`.
 
 """
-    try:
-        existing_rename = next(_exec(con, qry_id, params))
-    except StopIteration:
-        existing_rename = None
-    return existing_rename
+    return next(_exec(con, qry_id, params), None)
 
 
 def find_frm (con, cmp_frm):
@@ -158,7 +155,12 @@ cmp_child: comparable source path to search for parents of
 Returns `(frm, to)` or `None`.
 
 """
-    return _get_one(con, 'find frm parent', (cmp_child,))
+    parents = tuple(rename.parents(cmp_child))
+    qry = _QUERIES['find frm parent'].format(
+        parents=', '.join('?' * len(parents)))
+    cursor = con.cursor()
+    cursor.execute(qry, parents)
+    return next(cursor, None)
 
 
 def find_frm_child (con, cmp_parent):
@@ -171,4 +173,7 @@ cmp_parent: comparable source path to search for children of
 Returns `(frm, to)` or `None`.
 
 """
-    return _get_one(con, 'find frm child', (_child_pattern(cmp_parent),))
+
+    child_lb = join_path(cmp_parent, '')
+    child_ub = child_lb[:-1] + chr(ord(child_lb[-1]) + 1)
+    return _get_one(con, 'find frm child', (child_lb, child_ub))

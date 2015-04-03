@@ -28,37 +28,10 @@ Returns a string with the reason for the path being invalid, or None.
             )
 
 
-def parents (path, include_full=False):
-    """Get parents of a path.
-
-path: path to get all parents of
-include_full: whether to also get `path` itself
-
-Returns an iterator over parent paths.  The iterator is never empty - if `path`
-is root, we yield `path`.  The order is children before parents.
-
-"""
-    found = False
-    if include_full:
-        yield path
-        found = True
-
-    while True:
-        new_path = os.path.dirname(path)
-        if new_path == path:
-            if not found:
-                yield path
-            break
-        else:
-            yield new_path
-            found = True
-            path = new_path
-
-
 def path_device (path):
     """Determine the device containing the given path."""
     dev = None
-    for parent in parents(path, True):
+    for parent in rename.parents(path, True):
         try:
             dev = os.stat(parent, follow_symlinks=False).st_dev
         except (FileNotFoundError, NotADirectoryError):
@@ -73,7 +46,7 @@ def path_device (path):
 def path_nearest_parent (path):
     """Get the nearest existing parent of the given path."""
     nearest_parent = None
-    for parent in parents(path):
+    for parent in rename.parents(path, allow_empty=False):
         if os.path.exists(parent):
             nearest_parent = parent
             break
@@ -82,67 +55,96 @@ def path_nearest_parent (path):
     return parent if nearest_parent is None else nearest_parent
 
 
-def _check_same_warning (cat, existing_rename, new_rename):
-    """Yield warnings for duplicate source/destination paths.
+def _try_find_check (query, mk_warning):
+    """Run a `renamesdb` query to get a warning as a single rename.
+
+query: function to call which may throw `renamesdb.Error`, and returns a
+       `(frm, to)` rename to use in creating a warning
+mk_warning: function to call with the rename from `query` if not None; should
+            return a `util.Warn` instance
+
+Returns an iterator of `util.Warn` instances (from `mk_warning`, or if `query`
+threw).
+
+"""
+    try:
+        rename = query()
+    except renamesdb.Error as e:
+        yield util.Warn.from_exc('unknown', e)
+    else:
+        if rename is not None:
+            yield mk_warning(rename)
+
+
+def _same_warning (cat, existing_rename, new_rename):
+    """Return warning for duplicate source/destination paths.
 
 cat: warning category to use
-existing_rename: `(frm, to)` or `None` for the matching rename
+existing_rename: `(frm, to)` for the matching rename
 new_rename: `(frm, to)` for rename being checked
 
 """
-    if existing_rename is not None:
-        detail = '{}, {}'.format(
-            rename.preview_rename(*existing_rename),
-            rename.preview_rename(*new_rename)
-        )
-        yield util.Warn(cat, detail)
+    detail = '{}, {}'.format(
+        rename.preview_rename(*existing_rename),
+        rename.preview_rename(*new_rename)
+    )
+    return util.Warn(cat, detail)
 
 
-def _check_frm_parent_warning (existing_rename, new_frm):
-    """Yield warnings for clashing source paths (one is a parent of another).
+def _frm_parent_warning (existing_rename, new_frm):
+    """Return warning for clashing source paths (one is a parent of another).
 
-existing_rename: `(frm, to)` or `None` for the clashing rename
+existing_rename: `(frm, to)` for the clashing rename
 new_frm: source path for rename being checked
 
 """
-    if existing_rename is not None:
-        detail = '{}, {}'.format(repr(existing_rename[0]), repr(new_frm))
-        yield util.Warn('source parent', detail)
+    detail = '{}, {}'.format(repr(existing_rename[0]), repr(new_frm))
+    return util.Warn('source parent', detail)
 
 
-def _get_dependent_warnings (con, new_frm, new_to):
+def _get_dependent_warnings (con, frm, to):
     """Get warnings for a new rename that depend on previous renames.
 
 con: database connection
-new_frm: source path for new rename
-new_to: destination path for new rename
+frm: source path for new rename
+to: destination path for new rename
 
 Returns sequence of util.Warn instances.
 
 Should only be called once for each rename.
 
 """
-    cmp_new_frm = rename.comparable_path(new_frm)
-    cmp_new_to = rename.comparable_path(new_to)
+    cmp_frm = rename.comparable_path(frm)
+    cmp_to = rename.comparable_path(to)
     warnings = []
 
-    try:
-        rename_same_frm = renamesdb.find_frm(con, cmp_new_frm)
-        rename_same_to = renamesdb.find_to(con, cmp_new_to)
-        rename_frm_parent = renamesdb.find_frm_parent(con, cmp_new_frm)
-        rename_frm_child = renamesdb.find_frm_child(con, cmp_new_frm)
-    except renamesdb.Error as e:
-        warnings.append(util.Warn.from_exc('unknown', e))
-    else:
-        warnings.extend(itertools.chain(
-            _check_same_warning('dup source', rename_same_frm,
-                                (new_frm, new_to)),
-            _check_same_warning('dup dest', rename_same_to, (new_frm, new_to)),
-            _check_frm_parent_warning(rename_frm_parent, new_frm),
-            _check_frm_parent_warning(rename_frm_child, new_frm)
-        ))
+    # check for duplicates
+    same_frm_warnings = tuple(_try_find_check(
+        lambda: renamesdb.find_frm(con, cmp_frm),
+        lambda rename: _same_warning('dup source', rename, (frm, to))
+    ))
+    warnings.extend(same_frm_warnings)
+    warnings.extend(_try_find_check(
+        lambda: renamesdb.find_to(con, cmp_to),
+        lambda rename: _same_warning('dup dest', rename, (frm, to))
+    ))
 
-    renamesdb.add(con, new_frm, new_to, cmp_new_frm, cmp_new_to)
+    # if not a duplicate, check for children
+    if not same_frm_warnings:
+        frm_child_warnings = tuple(_try_find_check(
+            lambda: renamesdb.find_frm_child(con, cmp_frm),
+            lambda rename: _frm_parent_warning(rename, frm)
+        ))
+        warnings.extend(frm_child_warnings)
+
+        # if not a parent, check for parents
+        if not frm_child_warnings:
+            warnings.extend(_try_find_check(
+                lambda: renamesdb.find_frm_parent(con, cmp_frm),
+                lambda rename: _frm_parent_warning(rename, frm)
+            ))
+
+    renamesdb.add(con, frm, to, cmp_frm, cmp_to)
     return warnings
 
 

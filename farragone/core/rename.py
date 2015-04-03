@@ -40,6 +40,34 @@ cwd: directory that `path` is relative to (default: Python process's current
     )
 
 
+def parents (path, include_full=False, allow_empty=True):
+    """Get parents of a path.
+
+path: path to get all parents of
+include_full: whether to also get `path` itself
+allow_empty: the returned iterator may be empty; if `False` and `path` is root,
+             we yield `path`.
+
+Returns an iterator over parent paths.  The order is children before parents.
+
+"""
+    found = False
+    if include_full:
+        yield path
+        found = True
+
+    while True:
+        new_path = os.path.dirname(path)
+        if new_path == path:
+            if not found and not allow_empty:
+                yield path
+            break
+        else:
+            yield new_path
+            found = True
+            path = new_path
+
+
 class DestinationExistsError (OSError):
     """Failed to rename a file because the destination path already exists."""
     def __init__ (self, dest):
