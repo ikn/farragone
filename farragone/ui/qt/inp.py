@@ -181,6 +181,15 @@ Item states are dicts with 'input' being a `core.inputs.Input`.
                 'description': _('Specify files manually'),
                 'create': self._new_list,
                 'getstate': self._get_list_state
+            }, {
+                'id': 'recursive',
+                # NOTE: file source type name
+                'name': _('Recursive Files'),
+                'description': _(
+                    'Specify a directory in which to find files recursively'
+                ),
+                'create': self._new_recursive,
+                'getstate': self._get_recursive_state
             }
         ], _('Add a source of files'), _('Remove this source of files'))
 
@@ -209,6 +218,16 @@ Item states are dicts with 'input' being a `core.inputs.Input`.
         # NOTE: default value for the 'Pattern' file source; 'ext' means file
         # extension
         text.setText(_('*.ext'))
+        text.textChanged.connect(changed)
+        return {'data': {'text_widget': text}, 'item': text}
+
+    def _get_recursive_state (self, data):
+        path = data['text_widget'].text()
+        return {'input': core.inputs.RecursiveFilesInput(path)}
+
+    def _new_recursive (self, changed):
+        text = qt.QLineEdit()
+        text.setPlaceholderText(_('Directory path'))
         text.textChanged.connect(changed)
         return {'data': {'text_widget': text}, 'item': text}
 

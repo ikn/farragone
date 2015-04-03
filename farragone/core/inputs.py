@@ -6,7 +6,7 @@ Foundation, either version 3 of the License, or (at your option) any later
 version."""
 
 import abc
-from os import path as os_path
+import os
 from glob import iglob
 
 
@@ -47,8 +47,31 @@ Attributes:
 pattern: as passed to the constructor
 
 """
+
     def __init__ (self, pattern):
-        self.pattern = os_path.expanduser(pattern)
+        self.pattern = os.path.expanduser(pattern)
 
     def __iter__ (self):
         return iglob(self.pattern)
+
+
+class RecursiveFilesInput (Input):
+    """Recursively search a directory for files.
+
+path: directory to search
+
+Attributes:
+
+path: as passed to the constructor
+
+"""
+
+    def __init__ (self, path):
+        self.path = os.path.expanduser(path)
+
+    def __iter__ (self):
+        # doesn't throw
+        join = os.path.join
+        for d, dirs, files in os.walk(self.path):
+            for f in files:
+                yield join(d, f)
