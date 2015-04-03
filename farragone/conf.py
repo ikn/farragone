@@ -49,6 +49,7 @@ default value.  These operations raise `KeyError` for settings not in `defn`.
 """
 
     def __init__ (self, load_fns, save_fn, defn):
+        self._log = util.logger('conf.settings')
         self.filename = save_fn
         self.definition = defn
 
@@ -91,7 +92,7 @@ default value.  These operations raise `KeyError` for settings not in `defn`.
         os.rename(tmp_fn, fn)
 
     def __setitem__ (self, key, value):
-        print('set', key, value)
+        self._log('set', key, value)
         if key in self.definition:
             if not self.definition[key]['validate'](value):
                 raise TypeError(value)

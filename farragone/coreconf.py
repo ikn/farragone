@@ -40,6 +40,7 @@ else:
         os.environ['LANG'] = locale.getdefaultlocale()[0]
 
 LOG = {
+    'conf.settings': True,
     'qt.widgets.natural_widget_order': False,
     'qt.output:preview': False
 }
