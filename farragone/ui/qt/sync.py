@@ -58,15 +58,19 @@ thread: QThread in which `run` is called
         self.thread.setObjectName(name)
         self.thread.finished.connect(self._thread_finished)
         self._queued = False
-        self._exited = False
+        self._paused = False
         self._finish_cbs = []
 
     def _start_thread (self):
         # actually reset and start the thread working
-        if not self._exited:
+        if self._paused:
+            self._log('FG start (paused)')
+            return False
+        else:
             self._log('FG start')
             self._reset()
             self.thread.start()
+            return True
 
     def _thread_finished (self):
         # called when the thread finishes working
@@ -82,9 +86,8 @@ thread: QThread in which `run` is called
             self._queued = False
             thread = self.thread
             thread.working_lock.lock()
-            thread.working = True
+            thread.working = self._start_thread()
             thread.working_lock.unlock()
-            self._start_thread()
 
     def update (self):
         """Re-run the computation.
@@ -106,14 +109,17 @@ be called at any time, but only ever in a single thread.
             # if thread is running, it won't take long to finish, so just wait
             self._log('FG wait')
             thread.wait()
-            thread.working = True
-            self._start_thread()
+            thread.working = self._start_thread()
         thread.working_lock.unlock()
 
-    def quit (self):
+    def pause (self):
         """Stop any current and all future update jobs."""
-        self._exited = True
+        self._paused = True
         self.thread.requestInterruption()
+
+    def resume (self):
+        """Allow jobs to run after a call to `pause`."""
+        self._paused = False
 
     def wait (self, callback):
         """Wait for an update to finish.

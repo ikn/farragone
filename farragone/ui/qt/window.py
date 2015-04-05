@@ -91,7 +91,7 @@ class Window (widgets.Window):
             ident = next(self._locked.elements())
         except StopIteration:
             # stop preview thread
-            self.output.quit()
+            self.output.pause()
             evt.accept()
         else:
             evt.ignore()

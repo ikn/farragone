@@ -218,6 +218,7 @@ started: whether renaming actually started (a rename could have been performed)
             self.running = None
             self._can_continue_run = False
             self.update_status()
+            self._preview.resume()
             self.stopped.emit(started)
             self._run_btn.setEnabled(True)
 
@@ -248,6 +249,7 @@ started: whether renaming actually started (a rename could have been performed)
                 do_run = False
 
         if do_run:
+            self._preview.pause()
             self.running = RenameThread(self._inputs)
             self.current_operation = None
             self.failed = []

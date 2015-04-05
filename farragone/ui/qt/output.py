@@ -33,6 +33,6 @@ inputs: inp.Input
         """Update the preview tabs from the input section."""
         self.preview.update()
 
-    def quit (self):
+    def pause (self):
         """Stop any background tasks and don't allow any more to start."""
-        self.preview.quit()
+        self.preview.pause()
