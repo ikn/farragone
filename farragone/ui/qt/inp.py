@@ -430,7 +430,7 @@ template: `string.Template`
 """
 
     # NOTE: UI section heading
-    name = _('Template')
+    name = _('Output Template')
     doc = doc.template
 
     def __init__ (self):
