@@ -6,6 +6,7 @@ Foundation, either version 3 of the License, or (at your option) any later
 version."""
 
 from collections import Counter
+import webbrowser
 
 from ... import conf
 settings = conf.settings
@@ -74,6 +75,16 @@ class Window (widgets.Window):
         self.release('run')
         if started:
             self.output.update()
+
+    def event (self, evt):
+        # gets all events for this widget
+        # WhatsThisClicked events propagate up from all child widgets
+        if evt.type() == qt.QEvent.WhatsThisClicked:
+            webbrowser.open(evt.href())
+            evt.accept()
+            return True
+        else:
+            return widgets.Window.event(self, evt)
 
     def closeEvent (self, evt):
         try:

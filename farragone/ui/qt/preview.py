@@ -10,7 +10,7 @@ from html import escape
 
 from ... import core
 from ... import conf, util
-from . import qt, widgets, sync
+from . import doc, qt, widgets, sync
 
 log = util.logger('qt.output:preview')
 
@@ -109,7 +109,8 @@ Respects conf.MAX_PREVIEW_LENGTH.
 
     def __init__ (self):
         # NOTE: & marks keyboard accelerator
-        widgets.Tab.__init__(self, _('&Preview'), qt.QTextEdit())
+        widgets.Tab.__init__(self, _('&Preview'), qt.QTextEdit(),
+                             doc=doc.preview_renames)
         self.widget.setReadOnly(True)
         self.widget.setLineWrapMode(qt.QTextEdit.NoWrap)
         self.reset()
@@ -147,7 +148,7 @@ class PreviewWarnings (widgets.Tab):
     def __init__ (self):
         # NOTE: & marks keyboard accelerator
         widgets.Tab.__init__(self, _('&Warnings'), qt.QTextEdit(),
-                             'dialog-warning')
+                             icon='dialog-warning', doc=doc.preview_warnings)
         self.widget.setReadOnly(True)
         self.widget.setLineWrapMode(qt.QTextEdit.NoWrap)
         self.reset()
@@ -186,7 +187,8 @@ inputs: `inp.Input`
 
     def __init__ (self, inputs):
         # NOTE: & marks keyboard accelerator
-        widgets.Tab.__init__(self, _('&Fields'), qt.QTextEdit())
+        widgets.Tab.__init__(self, _('&Fields'), qt.QTextEdit(),
+                             doc=doc.preview_fields)
         self.widget.setReadOnly(True)
         self.widget.setLineWrapMode(qt.QTextEdit.NoWrap)
         self._inputs = inputs
@@ -220,6 +222,7 @@ Attributes:
 
 renames: PreviewRenames
 warnings: PreviewWarnings
+fields: PreviewFields
 
 """
 

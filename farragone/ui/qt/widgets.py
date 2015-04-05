@@ -53,6 +53,42 @@ defn: dict with optional keys:
     return b
 
 
+class ActionButton (qt.QPushButton):
+    """Create a `QPushButton` from a `QAction`.
+
+action: `QAction` to use; the button updates when the action is changed
+skip: behaviour to ignore when creating the button; a sequence of strings, each
+      one of 'text', 'statustip', 'tooltip', 'icon', 'enabled', 'checkable' and
+      'checked'
+
+"""
+
+    def __init__ (self, action, skip=()):
+        self._action = action
+        self._skip = frozenset(skip)
+        qt.QPushButton.__init__(self)
+        action.changed.connect(self._update_from_action)
+        self.clicked.connect(action.trigger)
+        self._update_from_action()
+
+    def _update_from_action (self):
+        skip = self._skip
+        if 'text' not in skip:
+            self.setText(self._action.text())
+        if 'statustip' not in skip:
+            self.setStatusTip(self._action.statusTip())
+        if 'tooltip' not in skip:
+            self.setToolTip(self._action.toolTip())
+        if 'icon' not in skip:
+            self.setIcon(self._action.icon())
+        if 'enabled' not in skip:
+            self.setEnabled(self._action.isEnabled())
+        if 'checkable' not in skip:
+            self.setCheckable(self._action.isCheckable())
+        if 'checked' not in skip:
+            self.setChecked(self._action.isChecked())
+
+
 def mk_label (text, rich=False, tooltip=None):
     """Create a QLabel.
 
@@ -222,12 +258,13 @@ class Tab (qt.QObject):
 
 name: tab label; may define accelerators using '&'
 widget: QWidget to use as the page for the tab
-icon: icon name or `None`
+icon: icon name
+doc: help string (Qt rich text)
 closeable: whether the tab has a close button and can be closed
 
 Attributes:
 
-name, widget, closeable: as given
+name, widget, doc, closeable: as given
 icon: QIcon
 error_signal: emitted with the current 'error' state when it changes
 new_signal: emitted with the current 'new' state when it changes
@@ -237,12 +274,15 @@ new_signal: emitted with the current 'new' state when it changes
     error_signal = qt.pyqtSignal(bool)
     new_signal = qt.pyqtSignal(bool)
 
-    def __init__ (self, name, widget, icon=None, closeable=False):
+    def __init__ (self, name, widget, icon=None, doc=None, closeable=False):
         qt.QObject.__init__(self)
         self.name = name
         widget._tab = self
         self.widget = widget
         self.icon = qt.QIcon() if icon is None else qt.QIcon.fromTheme(icon)
+        self.doc = doc
+        if doc is not None:
+            widget.setWhatsThis(doc)
         self.closeable = closeable
         self._error = False
         self._new = False
@@ -322,6 +362,8 @@ widget: QTabWidget; adding tabs directly will not apply correct formatting
             bar = self.widget.tabBar()
             bar.setTabButton(i, qt.QTabBar.LeftSide, None)
             bar.setTabButton(i, qt.QTabBar.RightSide, None)
+        if tab.doc is not None:
+            bar.setTabWhatsThis(i, tab.doc)
         self._set_error(tab, tab.error)
         self._set_new(tab, tab.new)
 

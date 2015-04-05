@@ -92,6 +92,8 @@ failed: list of error strings for the current/previous run
 
         status_line = qt.QHBoxLayout()
         self.addLayout(status_line)
+        status_line.addWidget(
+            widgets.ActionButton(qt.QWhatsThis.createAction(), skip=('text',)))
         self.status = widgets.mk_label('', rich=True)
         self.status.setWordWrap(False)
         status_line.addWidget(self.status, stretch=1)

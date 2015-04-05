@@ -11,7 +11,7 @@ import locale
 from html import escape
 
 from ... import util, conf, core
-from . import qt, widgets
+from . import doc, qt, widgets
 
 
 class Dynamic:
@@ -118,6 +118,8 @@ items: sequence of current items, each a dict with keys:
          else layout.addWidget)(controls, 1, 0, 1, 2, qt.Qt.AlignTop)
         layout.addWidget(rm_btn, 0, 1)
         widget = widgets.widget_from_layout(layout)
+        if 'doc' in defn:
+            widget.setWhatsThis(defn['doc'])
         self.insertWidget(len(self.items), widget)
 
         # focus specific widget, or the main one, or any we can find
@@ -164,6 +166,7 @@ Item states are dicts with 'input' being a `core.inputs.Input`.
 
     # NOTE: UI section heading
     name = _('Files')
+    doc = doc.files_section
 
     def __init__ (self):
         CustomList.__init__(self, [
@@ -173,14 +176,16 @@ Item states are dicts with 'input' being a `core.inputs.Input`.
                 'name': _('Pattern'),
                 'description': _('Use a glob-style pattern'),
                 'create': self._new_glob,
-                'getstate': self._get_glob_state
+                'getstate': self._get_glob_state,
+                'doc': doc.files_glob
             }, {
                 'id': 'list',
                 # NOTE: file source type name
                 'name': _('List'),
                 'description': _('Specify files manually'),
                 'create': self._new_list,
-                'getstate': self._get_list_state
+                'getstate': self._get_list_state,
+                'doc': doc.files_list
             }, {
                 'id': 'recursive',
                 # NOTE: file source type name
@@ -189,7 +194,8 @@ Item states are dicts with 'input' being a `core.inputs.Input`.
                     'Specify a directory in which to find files recursively'
                 ),
                 'create': self._new_recursive,
-                'getstate': self._get_recursive_state
+                'getstate': self._get_recursive_state,
+                'doc': doc.files_recursive
             }
         ], _('Add a source of files'), _('Remove this source of files'))
 
@@ -241,6 +247,7 @@ Item states are dicts with 'fields' being a `core.field.Fields`.
 
     # NOTE: UI section heading
     name = _('Fields')
+    doc = doc.fields_section
 
     def __init__ (self):
         CustomList.__init__(self, [
@@ -251,21 +258,24 @@ Item states are dicts with 'fields' being a `core.field.Fields`.
                 'description':
                     _('Use the filename or a directory from the path'),
                 'create': self._new_component,
-                'getstate': self._get_component_state
+                'getstate': self._get_component_state,
+                'doc': doc.fields_component
             }, {
                 'id': 'regex',
                 # NOTE: field source type name
                 'name': _('Regular Expression'),
                 'description': 'Capture groups from a matching regex',
                 'create': self._new_regex,
-                'getstate': self._get_regex_state
+                'getstate': self._get_regex_state,
+                'doc': doc.fields_regex
             }, {
                 'id': 'ordering',
                 # NOTE: field source type name
                 'name': _('Ordering'),
                 'description': _('Use the position when the files are ordered'),
                 'create': self._new_ordering,
-                'getstate': self._get_ordering_state
+                'getstate': self._get_ordering_state,
+                'doc': doc.fields_ordering
             }
         ], _('Add a source of fields'), _('Remove this source of fields'))
 
@@ -421,6 +431,7 @@ template: `string.Template`
 
     # NOTE: UI section heading
     name = _('Template')
+    doc = doc.template
 
     def __init__ (self):
         Changing.__init__(self)
@@ -477,6 +488,8 @@ template: TemplateSection
 
     def add_section (self, section):
         group = qt.QGroupBox(section.name)
+        if hasattr(section, 'doc'):
+            group.setWhatsThis(section.doc)
         group.setLayout(section)
         self._layout.addWidget(group)
 

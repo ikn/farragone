@@ -50,6 +50,11 @@ installing by
     make inplace
     ./run
 
+For help on using the application, use the 'What's This?' button located at the
+bottom of the main window and then select part of the UI to get documentation
+for.  (Alternatively, press shift + F1 while the part of the UI to get
+documentation for is focused.)
+
     KNOWN ISSUES
 
 When installing to a path that doesn't contain the 'hicolor' icon theme's

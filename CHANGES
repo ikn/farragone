@@ -2,6 +2,7 @@
  * tabbed output section
  * warnings tab in output section
  * fields tab in output section
+ * full in-application documentation
  * 'Recursive Files' file source
  * ask for confirmation when running if there are problems (warnings)
  * support XDG paths
