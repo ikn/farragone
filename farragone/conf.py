@@ -53,10 +53,10 @@ default value.  These operations raise `KeyError` for settings not in `defn`.
         self.filename = save_fn
         self.definition = defn
 
+        all_overrides = [self._load(fn) for fn in load_fns]
         for key, item_defn in defn.items():
             self[key] = item_defn['default']
-        for fn in load_fns:
-            overrides = self._load(fn)
+        for overrides in all_overrides:
             for key, value in overrides.items():
                 self[key] = value
 

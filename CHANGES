@@ -1,3 +1,6 @@
+0.2.0-next:
+ * bug: always uses default configuration
+
 0.2.0:
  * tabbed output section
  * warnings tab in output section
