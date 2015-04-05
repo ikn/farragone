@@ -107,13 +107,21 @@ Returns a sequence of the paths that were created, deepest first.
 
 def _rename_cross_device (frm, to):
     """Rename a file across mount points."""
+    is_dir = os.path.isdir(frm) and not os.path.islink(frm)
     try:
-        shutil.copy2(frm, to)
-        os.remove(frm)
+        if is_dir:
+            shutil.copytree(frm, to, symlinks=True)
+            shutil.rmtree(frm)
+        else:
+            shutil.copy2(frm, to, follow_symlinks=False)
+            os.remove(frm)
     except OSError:
         # try to clean up
         try:
-            os.remove(to)
+            if is_dir:
+                shutil.rmtree(to)
+            else:
+                os.remove(to)
         except OSError:
             pass
         raise
