@@ -28,12 +28,26 @@ Returns a string with the reason for the path being invalid, or None.
             )
 
 
+def safe_stat (path):
+    try:
+        return os.stat(path, follow_symlinks=False)
+    except NotImplementedError:
+        return os.stat(path)
+
+
+def safe_access (path, mode):
+    try:
+        return os.access(path, mode, follow_symlinks=False)
+    except NotImplementedError:
+        return os.access(path, mode)
+
+
 def path_device (path):
     """Determine the device containing the given path."""
     dev = None
     for parent in rename.parents(path, True):
         try:
-            dev = os.stat(parent, follow_symlinks=False).st_dev
+            dev = safe_stat(parent).st_dev
         except (FileNotFoundError, NotADirectoryError):
             pass
         except OSError:
@@ -174,7 +188,7 @@ Other arguments are as taken by `get`.
 
         if not os.path.exists(frm):
             warnings.append(util.Warn('source', repr(frm)))
-        elif not os.access(frm, os.R_OK, follow_symlinks=False):
+        elif not safe_access(frm, os.R_OK):
             warnings.append(util.Warn('source perm', repr(frm)))
 
         detail = path_invalid(to)
@@ -192,7 +206,7 @@ Other arguments are as taken by `get`.
             if (
                 # can't write to subdirs of files
                 not os.path.isdir(to_nearest_parent) or
-                not os.access(to_nearest_parent, os.W_OK, follow_symlinks=False)
+                not safe_access(to_nearest_parent, os.W_OK)
             ):
                 warnings.append(util.Warn('dest perm', repr(to)))
 
