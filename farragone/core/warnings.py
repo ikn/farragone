@@ -112,7 +112,8 @@ existing_rename: `(frm, to)` for the clashing rename
 new_frm: source path for rename being checked
 
 """
-    detail = '{}, {}'.format(repr(existing_rename[0]), repr(new_frm))
+    detail = '{}, {}'.format(rename.fmt_path(existing_rename[0]),
+                             rename.fmt_path(new_frm))
     return util.Warn('source parent', detail)
 
 
@@ -187,16 +188,16 @@ Other arguments are as taken by `get`.
         warnings.extend(new_warnings)
 
         if not os.path.exists(frm):
-            warnings.append(util.Warn('source', repr(frm)))
+            warnings.append(util.Warn('source', rename.fmt_path(frm)))
         elif not safe_access(frm, os.R_OK):
-            warnings.append(util.Warn('source perm', repr(frm)))
+            warnings.append(util.Warn('source perm', rename.fmt_path(frm)))
 
         detail = path_invalid(to)
         if detail is not None:
-            warnings.append(
+            warnings.append(util.Warn(
                 # NOTE: warning detail for an invalid destination path;
                 # placeholders are the path and the problem with it
-                util.Warn('dest', '{0}: {1}'.format(repr(to), detail)))
+                'dest', '{0}: {1}'.format(rename.fmt_path(to), detail)))
 
         if os.path.exists(to):
             warnings.append(
@@ -208,7 +209,7 @@ Other arguments are as taken by `get`.
                 not os.path.isdir(to_nearest_parent) or
                 not safe_access(to_nearest_parent, os.W_OK)
             ):
-                warnings.append(util.Warn('dest perm', repr(to)))
+                warnings.append(util.Warn('dest perm', rename.fmt_path(to)))
 
         if path_device(frm) != path_device(to):
             warnings.append(

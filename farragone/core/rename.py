@@ -10,13 +10,17 @@ import itertools
 import os
 import shutil
 
-from .. import util
+from .. import conf, util
+
+
+def fmt_path (path):
+    return repr(path.replace(os.sep, '/') if conf.WINDOWS else path)
 
 
 def preview_rename (frm, to):
     """Return a string displaying a rename operation."""
     # NOTE: rename preview: source -> destination
-    return _('{0} → {1}').format(repr(frm), repr(to))
+    return _('{0} → {1}').format(fmt_path(frm), fmt_path(to))
 
 
 # given a file path, return one that can be safely compared to others
@@ -72,7 +76,8 @@ class DestinationExistsError (OSError):
     """Failed to rename a file because the destination path already exists."""
     def __init__ (self, dest):
         # NOTE: trying to rename to a file that already exists
-        OSError.__init__(self, _('destination exists: {}').format(repr(dest)))
+        OSError.__init__(
+            self, _('destination exists: {}').format(fmt_path(dest)))
 
 
 def _ensure_dir_exists (path):
@@ -201,7 +206,7 @@ is a sequence of util.Warn instances (empty if `with_warnings` is False).
                 # NOTE: warning detail for unknown fields; placeholders are the
                 # source filename and the field names
                 detail = _('{0}: fields: {1}').format(
-                    repr(path), ', '.join(map(repr, e.args)))
+                    fmt_path(path), ', '.join(map(repr, e.args)))
                 warnings.append(util.Warn('unresolved fields', detail))
 
         if dest_path is None:
