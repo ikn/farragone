@@ -175,9 +175,11 @@ index: as passed to the constructor
         return Fields.warnings.fget(self) + self._warnings
 
     def evaluate (self, paths):
-        for path in paths:
-            # splitdrive always gives path starting with separator
-            components = os_path.splitdrive(path)[1].split(os_path.sep)[1:]
+        for full_path in paths:
+            drive, path = os_path.splitdrive(full_path)
+            components = [drive]
+            # absolute, so splitdrive always gives path starting with separator
+            components.extend(path.split(os_path.sep)[1:])
             try:
                 component = components[self.index]
             except IndexError:

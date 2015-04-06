@@ -36,7 +36,7 @@ fields_section = _(r'''
 fields_component = _(r'''
 <p>Split the source file path into its components (eg. <i>/some/file/path</i> has components <i>some</i>, <i>file</i> and <i>path</i>) and create a field from one.</i>
 
-<p>The first text entry decides which component to use, using a number starting from <b>0</b>.  Negative numbers start from the end of the path: <b>-1</b> is the base file or directory name.</p>
+<p>The first text entry decides which component to use, using a number starting from <b>0</b>.  Negative numbers start from the end of the path: <b>-1</b> is the base file or directory name.  Component <b>0</b> is the drive, if any (eg. <i>C:</i> on Windows).</p>
 
 <p>The second text entry is gives the field name.</p>
 ''')
