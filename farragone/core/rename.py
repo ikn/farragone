@@ -173,15 +173,15 @@ Raises OSError.
             raise
 
 
-def _get_renames (with_warnings, inps, fields, template,
-                  fields_transform=lambda f: f, cwd=None):
+def _get_renames (with_warnings, inps, fields, template, cwd=None):
     """Like `get_renames`, but possibly including warnings.
 
 with_warnings: whether to compute warnings that can only be determined while
                determining the source and destination paths.
 
-Returned iterator yields `(input_path, output_path, warnings)`, where warnings
-is a sequence of util.Warn instances (empty if `with_warnings` is False).
+Returns `(renames, done)` like `get_renames`; `renames` yields
+`(input_path, output_path, warnings)`, where warnings is a sequence of util.Warn
+instances (empty if `with_warnings` is False).
 
 """
     if cwd is not None:
@@ -189,29 +189,30 @@ is a sequence of util.Warn instances (empty if `with_warnings` is False).
 
     paths = itertools.chain.from_iterable(inps)
     abs_paths = map(lambda path: _get_abs_path(path, cwd), paths)
-    paths1, paths2 = itertools.tee(abs_paths, 2)
+    result, state = fields.evaluate(abs_paths)
 
-    for path, field_vals in zip(
-        paths2, map(fields_transform, fields.evaluate(paths1))
-    ):
-        warnings = []
-        dest_path = None
+    def get ():
+        for path, field_vals in result:
+            warnings = []
+            dest_path = None
 
-        if with_warnings:
-            try:
-                dest_path = template.substitute(field_vals)
-            except ValueError:
-                pass
-            except KeyError as e:
-                # NOTE: warning detail for unknown fields; placeholders are the
-                # source filename and the field names
-                detail = _('{0}: fields: {1}').format(
-                    fmt_path(path), ', '.join(map(repr, e.args)))
-                warnings.append(util.Warn('unresolved fields', detail))
+            if with_warnings:
+                try:
+                    dest_path = template.substitute(field_vals)
+                except ValueError:
+                    pass
+                except KeyError as e:
+                    # NOTE: warning detail for unknown fields; placeholders are
+                    # the source filename and the field names
+                    detail = _('{0}: fields: {1}').format(
+                        fmt_path(path), ', '.join(map(repr, e.args)))
+                    warnings.append(util.Warn('unresolved fields', detail))
 
-        if dest_path is None:
-            dest_path = template.safe_substitute(field_vals)
-        yield (path, _get_abs_path(dest_path, cwd), warnings)
+            if dest_path is None:
+                dest_path = template.safe_substitute(field_vals)
+            yield (path, _get_abs_path(dest_path, cwd), warnings)
+
+    return (get(), lambda: fields.cleanup(state))
 
 
 def get_renames (*args, **kwargs):
@@ -221,14 +222,21 @@ inps: sequence of `inputs.Input` to retrieve paths from
 fields: `field.Fields` instance defining fields to retrieve from input paths
 template: `string.Template` instance to generate output paths using retrieved
           fields
-fields_transform: function taking a fields `dict` and producing another
 cwd: directory that relative paths are relative to (default: the working
      directory of this process)
 
-Returns an iterator yielding `(input_path, output_path, unresolved_fields)`
-tuples, where both paths are absolute and `unresolved_fields` is a sequence of
-fields not substituted in `template`.
+Returns `(get, done)`, where:
+
+renames: an iterator yielding `(input_path, output_path)` tuples, where both
+         paths are absolute
+done: function to call with no arguments to clean up some internal state when
+      finished
 
 """
-    for frm, to, warnings in _get_renames(False, *args, **kwargs):
-        yield (frm, to)
+    renames, done = _get_renames(False, *args, **kwargs)
+
+    def get ():
+        for frm, to, warnings in renames:
+            yield (frm, to)
+
+    return (get(), done)

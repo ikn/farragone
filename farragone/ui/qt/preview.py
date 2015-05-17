@@ -68,14 +68,15 @@ each checked rename.
 """
         # reset timer for automatic `started` signal
         self._reset_signal()
-        inps, fields, transform, template = self._inputs.gather()
+        inps, fields, template = self._inputs.gather()
         interrupted = False
         sent = 0
         ops = []
         warnings = list(fields.warnings)
 
-        get, done = core.warnings.get_renames_with_warnings()
-        for (frm, to), new_warnings in get(inps, fields, template, transform):
+        renames, done = core.warnings.get_renames_with_warnings(
+            inps, fields, template)
+        for (frm, to), new_warnings in renames:
             ops.append((frm, to))
             warnings.extend(new_warnings)
             if self._ready_for_signal():
@@ -205,7 +206,8 @@ inputs: `inp.Input`
                 rendered_name = (
                     '<font color="red">{}</font>' if name in dup_names else '{}'
                 ).format(escape(name))
-                # NOTE: TODO
+                # NOTE: line in the Fields tab; placeholders are the field name
+                # and a description of the field's source
                 lines.append(_(
                     '{0} <font color="grey">({1})</font>'
                 ).format(rendered_name, source))

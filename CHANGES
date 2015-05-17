@@ -2,6 +2,7 @@
  * support moving a directory between devices
  * display paths with '/' separators on Windows (looks nicer when we're using
    escaped strings)
+ * reduce memory usage of the 'ordering' field source
  * bug: preview could run while renaming
  * bug: always uses default configuration
 

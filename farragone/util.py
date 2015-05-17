@@ -62,6 +62,12 @@ name: corresponds to `conf.LOG` keys
     return log
 
 
+def consume (i):
+    """Run through an iterator."""
+    for x in i:
+        pass
+
+
 def rate_limit (min_interval, f):
     """Rate-limit calls to a function.
 

@@ -340,9 +340,9 @@ Item states are dicts with 'fields' being a `core.field.Fields`.
     def _get_ordering_state (self, data):
         field_name = data['field_widget'].text()
         key = (
-            (lambda s: locale.strxfrm(s.lower()))
+            locale.strxfrm
             if data['casesensitive_widget'].isChecked()
-            else locale.strxfrm
+            else lambda s: locale.strxfrm(s.lower())
         )
         reverse = not data['ascending_widget'].isChecked()
         return {'fields': core.field.Ordering(field_name, key, reverse)}
@@ -371,53 +371,6 @@ Item states are dicts with 'fields' being a `core.field.Fields`.
             'casesensitive_widget': case_sensitive,
             'ascending_widget': ascending
         }, 'item': layout, 'focus': field}
-
-
-'''
-class FieldTransformsSection (Dynamic, Changing, qt.QVBoxLayout):
-    """UI section for defining field transformations."""
-
-    # NOTE: UI section heading
-    name = _('Field Transforms')
-
-    def __init__ (self, fields):
-        Changing.__init__(self)
-        qt.QVBoxLayout.__init__(self)
-        self._items = {}
-        self._fields = fields
-        fields.changed.connect(self._fields_changed)
-
-    def _fields_changed (self):
-        current = self._fields.names()
-        previous = set(self._items.keys())
-        new = current - previous
-        for name in new:
-            self.add(name)
-        for name in previous - current:
-            self.rm(name)
-        self.changed.emit()
-        if new:
-            self.new_widget.emit()
-
-    def add (self, name):
-        """Add a field transformation with the given name."""
-        layout = qt.QHBoxLayout()
-        layout.addWidget(widgets.mk_label(name))
-        text = qt.QLineEdit()
-        layout.addWidget(text)
-        text.setPlaceholderText(_('Python 3 code transform'))
-        text.textChanged.connect(self.changed)
-
-        row = widgets.widget_from_layout(layout)
-        self.addWidget(row)
-        self._items[name] = row
-
-    def rm (self, name):
-        """Remove a field transformation with the given name."""
-        row = self._items.pop(name)
-        self.removeWidget(row)
-        row.deleteLater()
-'''
 
 
 class TemplateSection (Changing, qt.QVBoxLayout):
@@ -455,7 +408,6 @@ Attributes:
 
 files: FilesSection
 fields: FieldsSection
-transforms: FieldTransformsSection
 template: TemplateSection
 
 """
@@ -472,9 +424,6 @@ template: TemplateSection
         self.fields = FieldsSection()
         self.fields.new_widget.connect(new_widget)
         self.fields.changed.connect(changed)
-        #self.transforms = FieldTransformsSection(self.fields)
-        #self.transforms.new_widget.connect(new_widget)
-        #self.transforms.changed.connect(changed)
         self.template = TemplateSection()
         self.template.changed.connect(changed)
 
@@ -483,7 +432,6 @@ template: TemplateSection
         self._layout.setSizeConstraint(qt.QLayout.SetMinAndMaxSize)
         self.add_section(self.files)
         self.add_section(self.fields)
-        #self.add_section(self.transforms)
         self.add_section(self.template)
 
     def add_section (self, section):
@@ -510,16 +458,14 @@ all_fields: `core.inputs.FieldCombination` containing all fields in `field_sets`
     def gather (self):
         """Return data defining the renaming scheme.
 
-Returns `(inps, fields, template, transform)`, where:
+Returns `(inps, fields, template)`, where:
 
 inps: sequence of `core.inputs.Input`
 fields: `core.inputs.Fields`
-transform: fields transformation function
 template: `string.Template` for the output path
 
 """
         inps = [f['state']['input'] for f in self.files.items]
         fields = self.gather_fields()[1]
-        transform = lambda f: f
         template = self.template.template
-        return (inps, fields, transform, template)
+        return (inps, fields, template)

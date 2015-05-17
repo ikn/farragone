@@ -6,11 +6,10 @@ Foundation, either version 3 of the License, or (at your option) any later
 version."""
 
 import itertools
-from functools import partial
 import os
 
 from .. import util, conf
-from . import rename, renamesdb
+from . import rename, db
 
 
 def path_invalid (path):
@@ -69,25 +68,20 @@ def path_nearest_parent (path):
     return parent if nearest_parent is None else nearest_parent
 
 
-def _try_find_check (query, mk_warning):
-    """Run a `renamesdb` query to get a warning as a single rename.
+def _find_check (query, mk_warning):
+    """Run a `db` query to get a warning as a single rename.
 
-query: function to call which may throw `renamesdb.Error`, and returns a
-       `(frm, to)` rename to use in creating a warning
+query: function to call which returns a `(frm, to)` rename to use in creating a
+       warning
 mk_warning: function to call with the rename from `query` if not None; should
             return a `util.Warn` instance
 
-Returns an iterator of `util.Warn` instances (from `mk_warning`, or if `query`
-threw).
+Returns an iterator of `util.Warn` instances from `mk_warning`
 
 """
-    try:
-        rename = query()
-    except renamesdb.Error as e:
-        yield util.Warn.from_exc('unknown', e)
-    else:
-        if rename is not None:
-            yield mk_warning(rename)
+    rename = query()
+    if rename is not None:
+        yield mk_warning(rename)
 
 
 def _same_warning (cat, existing_rename, new_rename):
@@ -117,10 +111,10 @@ new_frm: source path for rename being checked
     return util.Warn('source parent', detail)
 
 
-def _get_dependent_warnings (con, frm, to):
+def _get_dependent_warnings (wdb, frm, to):
     """Get warnings for a new rename that depend on previous renames.
 
-con: database connection
+wdb: `RenamesDBWithWarnings`
 frm: source path for new rename
 to: destination path for new rename
 
@@ -134,121 +128,111 @@ Should only be called once for each rename.
     warnings = []
 
     # check for duplicates
-    same_frm_warnings = tuple(_try_find_check(
-        lambda: renamesdb.find_frm(con, cmp_frm),
+    same_frm_warnings = tuple(_find_check(
+        lambda: wdb.find_frm(cmp_frm),
         lambda rename: _same_warning('dup source', rename, (frm, to))
     ))
     warnings.extend(same_frm_warnings)
-    warnings.extend(_try_find_check(
-        lambda: renamesdb.find_to(con, cmp_to),
+    warnings.extend(_find_check(
+        lambda: wdb.find_to(cmp_to),
         lambda rename: _same_warning('dup dest', rename, (frm, to))
     ))
 
     # if not a duplicate, check for children
     if not same_frm_warnings:
-        frm_child_warnings = tuple(_try_find_check(
-            lambda: renamesdb.find_frm_child(con, cmp_frm),
+        frm_child_warnings = tuple(_find_check(
+            lambda: wdb.find_frm_child(cmp_frm),
             lambda rename: _frm_parent_warning(rename, frm)
         ))
         warnings.extend(frm_child_warnings)
 
         # if not a parent, check for parents
         if not frm_child_warnings:
-            warnings.extend(_try_find_check(
-                lambda: renamesdb.find_frm_parent(con, cmp_frm),
+            warnings.extend(_find_check(
+                lambda: wdb.find_frm_parent(cmp_frm),
                 lambda rename: _frm_parent_warning(rename, frm)
             ))
 
-    renamesdb.add(con, frm, to, cmp_frm, cmp_to)
+    wdb.add(frm, to)
     return warnings
 
 
-def _get_renames_with_warnings (con, warnings, inps, fields, template, *args,
-                                **kwargs):
-    """Like `get` returned by `get_renames_with_warnings`.
+def _get_renames_with_warnings (wdb, inps, fields, template,
+                                *args, **kwargs):
+    """Like `get_renames_with_warnings`.
 
-con: database connection (possibly `None`)
-warnings: sequence of initial warnings (only yielded once)
+wdb: `RenamesDBWithWarnings`
 
-Other arguments are as taken by `get`.
+Other arguments are as taken by `get_renames_with_warnings`.
 
 """
-    warnings = list(warnings)
+    renames, done = rename._get_renames(
+        True, inps, fields, template, *args, **kwargs)
 
-    try:
-        template.substitute()
-    except ValueError as e:
-        warnings.append(util.Warn('template', util.exc_str(e)))
-    except KeyError:
-        pass
-
-    for frm, to, new_warnings in rename._get_renames(
-        True, inps, fields, template, *args, **kwargs
-    ):
-        warnings.extend(new_warnings)
-
-        if not os.path.exists(frm):
-            warnings.append(util.Warn('source', rename.fmt_path(frm)))
-        elif not safe_access(frm, os.R_OK):
-            warnings.append(util.Warn('source perm', rename.fmt_path(frm)))
-
-        detail = path_invalid(to)
-        if detail is not None:
-            warnings.append(util.Warn(
-                # NOTE: warning detail for an invalid destination path;
-                # placeholders are the path and the problem with it
-                'dest', '{0}: {1}'.format(rename.fmt_path(to), detail)))
-
-        if os.path.exists(to):
-            warnings.append(
-                util.Warn('dest exists', rename.preview_rename(frm, to)))
-        else:
-            to_nearest_parent = path_nearest_parent(to)
-            if (
-                # can't write to subdirs of files
-                not os.path.isdir(to_nearest_parent) or
-                not safe_access(to_nearest_parent, os.W_OK)
-            ):
-                warnings.append(util.Warn('dest perm', rename.fmt_path(to)))
-
-        if path_device(frm) != path_device(to):
-            warnings.append(
-                util.Warn('cross device', rename.preview_rename(frm, to)))
-
-        if con is not None:
-            warnings.extend(_get_dependent_warnings(con, frm, to))
-
-        yield ((frm, to), warnings)
+    def get ():
         warnings = []
 
+        try:
+            template.substitute()
+        except ValueError as e:
+            warnings.append(util.Warn('template', util.exc_str(e)))
+        except KeyError:
+            pass
 
-def get_renames_with_warnings ():
+        for frm, to, new_warnings in renames:
+            warnings.extend(new_warnings)
+
+            if not os.path.exists(frm):
+                warnings.append(util.Warn('source', rename.fmt_path(frm)))
+            elif not safe_access(frm, os.R_OK):
+                warnings.append(util.Warn('source perm', rename.fmt_path(frm)))
+
+            detail = path_invalid(to)
+            if detail is not None:
+                warnings.append(util.Warn(
+                    # NOTE: warning detail for an invalid destination path;
+                    # placeholders are the path and the problem with it
+                    'dest', '{0}: {1}'.format(rename.fmt_path(to), detail)))
+
+            if os.path.exists(to):
+                warnings.append(
+                    util.Warn('dest exists', rename.preview_rename(frm, to)))
+            else:
+                to_nearest_parent = path_nearest_parent(to)
+                if (
+                    # can't write to subdirs of files
+                    not os.path.isdir(to_nearest_parent) or
+                    not safe_access(to_nearest_parent, os.W_OK)
+                ):
+                    warnings.append(util.Warn('dest perm', rename.fmt_path(to)))
+
+            if path_device(frm) != path_device(to):
+                warnings.append(
+                    util.Warn('cross device', rename.preview_rename(frm, to)))
+
+            warnings.extend(_get_dependent_warnings(wdb, frm, to))
+
+            yield ((frm, to), warnings)
+            warnings = []
+
+    return (get(), done)
+
+
+def get_renames_with_warnings (*args, **kwargs):
     """Get files to rename and destination paths, with associated warnings.
 
-Returns `(get, done)`, where:
+Arguments are as taken by `get_renames`.
 
-get: function to call to get renames.  Arguments are as taken by `get_renames`.
-     Returns an iterator yielding `(rename, warnings)`, where `rename` is as
-     yielded by `get_renames` and `warnings` is a sequence of
-     util.Warn instances.
-done: function to call with no arguments to clean up some internal state when
-      finished
+Returns `(renames, done)`, like `get_renames`; `renames` yields
+`((input_path, output_path), warnings)`, where `warnings` is a sequence of
+util.Warn instances.
 
 """
-    con = None
-    con_err = None
-    try:
-        con = renamesdb.create()
-    except renamesdb.Error as e:
-        con_err = e
+    wdb = db.RenamesDBWithWarnings()
+    renames, done_core = _get_renames_with_warnings(wdb, *args, **kwargs)
 
-    def quit ():
-        nonlocal con
-        if con is not None:
-            con.close()
-            con = None
+    def done ():
+        done_core()
+        wdb.close()
 
-    return (partial(
-        _get_renames_with_warnings, con,
-        [] if con_err is None else [util.Warn.from_exc('unknown', con_err)]
-    ), quit)
+    return (renames, done)

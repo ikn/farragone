@@ -39,13 +39,12 @@ inputs: inp.Inputs
 when finished.
 
 """
-        inps, fields, transform, template = self._inputs.gather()
+        inps, fields, template = self._inputs.gather()
         start_op = self.signals.start_op
         end_op = self.signals.end_op
 
-        for i, (frm, to) in enumerate(core.rename.get_renames(
-            inps, fields, template, transform
-        )):
+        renames, done = core.rename.get_renames(inps, fields, template)
+        for i, (frm, to) in enumerate(renames):
             start_op.emit(i, frm, to)
             try:
                 core.rename.rename(frm, to)
@@ -54,6 +53,7 @@ when finished.
             else:
                 err = None
             end_op.emit(i, err is not None, err)
+        done()
 
         self.signals.loaded.emit()
 

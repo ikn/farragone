@@ -13,6 +13,7 @@ from os import path as os_path
 import locale
 
 from .. import util
+from . import db
 
 
 class Context:
@@ -57,13 +58,87 @@ class Fields (metaclass=abc.ABCMeta):
 
 paths: iterator yielding input paths (absolute and with normalised separators)
 
-Returns an iterator yielding `dict`s with field names as keys and string
-values, for each path in `paths`, in the same order.
+Returns an `(results, state)` where:
+
+results: iterator yielding `(path, fields)` tuples, where `path` is the original
+         path (order is preserved as in `paths`), and `fields` is a `dict` with
+         field names as keys and string values
+state: should be passed to `cleanup` once `results` has been used
 
 When fields cannot be retrieved, they are missing from the result.
 
 """
         pass
+
+    @abc.abstractmethod
+    def cleanup (self, state):
+        """Clean up state returned by `evaluate`."""
+        pass
+
+
+class SimpleEvalFields (Fields, metaclass=abc.ABCMeta):
+    """Fields where evaluation is independent for each path."""
+
+    @abc.abstractmethod
+    def evaluate_one (self, path):
+        """Return a `dict` of fields for the given path."""
+        pass
+
+    def evaluate (self, paths):
+        eval_one = self.evaluate_one
+        return (((path, eval_one(path)) for path in paths), None)
+
+    def cleanup (self, state):
+        pass
+
+
+class ComplexEvalFields (Fields, metaclass=abc.ABCMeta):
+    """Fields where evaluation for a path may depend on other paths."""
+
+    @abc.abstractmethod
+    def init_store (self):
+        """Initialise any storage necessary for evaluation and return it.
+
+This is passed to `cleanup` once finished.
+
+"""
+        pass
+
+    @abc.abstractmethod
+    def store_one (self, state, path):
+        """Store any information necessary about a path for evaluating fields
+for it later.
+
+state: as returned by `init_store`
+path: absolute source path
+
+"""
+        pass
+
+    def store (self, paths):
+        """Set up storage and store information for all paths.
+
+paths: iterator over source paths.
+
+"""
+        state = self.init_store()
+        store_one = self.store_one
+        return ((store_one(state, path) for path in paths), state)
+
+    @abc.abstractmethod
+    def evaluate_stored (self):
+        """Compute fields for all paths passed to `store_one`.
+
+Returns an iterator like `results` returned by `evaluate`, with paths in the
+order passed to `store` (the order of calls to `store_one`).
+
+"""
+        pass
+
+    def evaluate (self, paths):
+        store_iter, state = self.store(paths)
+        util.consume(store_iter)
+        return (self.evaluate_stored(), state)
 
 
 class FieldCombination (Fields):
@@ -110,31 +185,73 @@ duplicate_names: `set` of field names occuring more than once
         return sum((f.warnings for f in self.field_sets), []) + self._warnings
 
     def evaluate (self, paths):
-        path_iters = itertools.tee(paths, len(self.field_sets))
+        cplx = [fields for fields in self.field_sets
+                if isinstance(fields, ComplexEvalFields)]
+        simple = [fields for fields in self.field_sets
+                  if not isinstance(fields, ComplexEvalFields)]
+        states = {}
 
-        for results in zip(*(
-            fields.evaluate(path_iter)
-            for fields, path_iter in zip(self.field_sets, path_iters)
-        )):
-            combined_result = {}
-            for result in results:
-                combined_result.update(result)
-            yield combined_result
+        # sets path_vals
+        if cplx:
+            cplx_path_iters = itertools.tee(paths, len(cplx))
+            store_iters = []
+            for fields, path_iter in zip(cplx, cplx_path_iters):
+                store_iter, state = fields.store(path_iter)
+                store_iters.append(store_iter)
+                states[fields] = state
+            util.consume(zip(*store_iters))
+
+            first = cplx.pop()
+            path_vals = first.evaluate_stored(states[first])
+
+        else:
+            path_vals = ((path, {}) for path in paths)
+
+        # sets first_path_vals, simple_results
+        if simple:
+            first_path_vals, simple_path_vals = itertools.tee(path_vals, 2)
+            path_iters = itertools.tee((path for path, val in simple_path_vals),
+                                       len(simple))
+            simple_results = []
+            for fields, path_iter in zip(simple, path_iters):
+                single_results, state = fields.evaluate(path_iter)
+                simple_results.append(single_results)
+                states[fields] = state
+
+        else:
+            first_path_vals = path_vals
+            simple_results = []
+
+        cplx_results = [fields.evaluate_stored(states[fields])
+                        for fields in cplx]
+
+        def get ():
+            for results in zip(first_path_vals,
+                               *(simple_results + cplx_results)):
+                combined_result = {}
+                for path, result in results:
+                    combined_result.update(result)
+                yield (results[0][0], combined_result)
+
+        return (get(), states)
+
+    def cleanup (self, states):
+        for fields, state in states.items():
+            fields.cleanup(state)
 
 
-class NoFields (Fields):
+class NoFields (SimpleEvalFields):
     """Always retrieve an empty `dict` of fields."""
 
     @property
     def names (self):
         return []
 
-    def evaluate (self, paths):
-        for path in paths:
-            yield {}
+    def evaluate_one (self, path):
+        return {}
 
 
-class PathComponent (Fields):
+class PathComponent (SimpleEvalFields):
     """Use a path component as a field.
 
 field_name: name to give the retrieved field
@@ -174,21 +291,20 @@ index: as passed to the constructor
     def warnings (self):
         return Fields.warnings.fget(self) + self._warnings
 
-    def evaluate (self, paths):
-        for full_path in paths:
-            drive, path = os_path.splitdrive(full_path)
-            components = [drive]
-            # absolute, so splitdrive always gives path starting with separator
-            components.extend(path.split(os_path.sep)[1:])
-            try:
-                component = components[self.index]
-            except IndexError:
-                yield {}
-            else:
-                yield {self._name: component}
+    def evaluate_one (self, full_path):
+        drive, path = os_path.splitdrive(full_path)
+        components = [drive]
+        # absolute, so splitdrive always gives path starting with separator
+        components.extend(path.split(os_path.sep)[1:])
+        try:
+            component = components[self.index]
+        except IndexError:
+            return {}
+        else:
+            return {self._name: component}
 
 
-class RegexGroups (Fields):
+class RegexGroups (SimpleEvalFields):
     """Retrieve fields from groups matched by a regular expression.
 
 pattern: regular expression as a string; not implicitly anchored
@@ -258,21 +374,20 @@ regex: compiled regular expression
         # get the field name for a group by index
         return self._field_name_prefix + str(idx + 1)
 
-    def evaluate (self, paths):
-        for path in paths:
-            matches = self.regex.finditer(self.context(path))
-            try:
-                match = next(matches)
-            except StopIteration:
-                yield {}
-            else:
-                fields = {self._field_name(i): field
-                          for i, field in enumerate(match.groups())}
-                fields.update(match.groupdict())
-                yield fields
+    def evaluate_one (self, path):
+        matches = self.regex.finditer(self.context(path))
+        try:
+            match = next(matches)
+        except StopIteration:
+            return {}
+        else:
+            fields = {self._field_name(i): field
+                      for i, field in enumerate(match.groups())}
+            fields.update(match.groupdict())
+            return fields
 
 
-class Ordering (Fields):
+class Ordering (ComplexEvalFields):
     """Sort paths and use their position as a field.
 
 field_name: name to give the retrieved field
@@ -303,12 +418,16 @@ key, reverse, context: as passed to the constructor
     def names (self):
         return [self._name]
 
-    def evaluate (self, paths):
-        get_key = self.key
-        context = self.context
+    def init_store (self):
+        return db.OrderingDB(self.key, self.reverse)
 
-        ordered = sorted(enumerate(map(context, paths)),
-                         key=lambda x: get_key(x[1]), reverse=self.reverse)
-        with_order = sorted(enumerate(ordered), key=lambda x: x[1][0])
-        for sorted_index, (orig_index, path) in with_order:
-            yield {self._name: str(sorted_index + 1)}
+    def store_one (self, odb, path):
+        odb.add(self.context(path), path)
+
+    def evaluate_stored (self, odb):
+        odb.sort()
+        for index, path in odb.get_sorted():
+            yield (path, {self._name: str(index)})
+
+    def cleanup (self, odb):
+        odb.close()
