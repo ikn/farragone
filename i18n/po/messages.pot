@@ -6,9 +6,9 @@
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: 0.2.0\n"
+"Project-Id-Version: 0.2.1\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-04-05 12:09+0100\n"
+"POT-Creation-Date: 2015-05-17 20:18+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,85 +18,84 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
 
-#: i18n/po/../../farragone/core/field.py:51
+#: i18n/po/../../farragone/core/field.py:52
 msgid "empty field name ({})"
 msgstr ""
 
-#: i18n/po/../../farragone/core/field.py:99
+#: i18n/po/../../farragone/core/field.py:174
 msgid "duplicate field names: {}"
 msgstr ""
 
 #. NOTE: warning detail for invalid path component index
-#: i18n/po/../../farragone/core/field.py:161
+#: i18n/po/../../farragone/core/field.py:278
 #, python-brace-format
 msgid "index: {0}, field name: {1}"
 msgstr ""
 
 #. NOTE: used to refer to a particular field source
-#: i18n/po/../../farragone/core/field.py:167
+#: i18n/po/../../farragone/core/field.py:284
 msgid "path component, field name: {}"
 msgstr ""
 
 #. NOTE: warning detail for an invalid regular expression;
 #. placeholders are the pattern and the error message
-#: i18n/po/../../farragone/core/field.py:230
+#: i18n/po/../../farragone/core/field.py:348
 #, python-brace-format
 msgid "{0}: {1}"
 msgstr ""
 
-#: i18n/po/../../farragone/core/field.py:239
+#: i18n/po/../../farragone/core/field.py:357
 #, python-brace-format
 msgid "duplicate field names: {0} ({1})"
 msgstr ""
 
 #. NOTE: used to refer to a particular field source
-#: i18n/po/../../farragone/core/field.py:245
+#: i18n/po/../../farragone/core/field.py:363
 msgid "regular expression, pattern: {}"
 msgstr ""
 
 #. NOTE: used to refer to a particular field source
-#: i18n/po/../../farragone/core/field.py:298
+#: i18n/po/../../farragone/core/field.py:415
 msgid "ordering, field name: {}"
 msgstr ""
 
-#: i18n/po/../../farragone/core/warnings.py:27
+#: i18n/po/../../farragone/core/warnings.py:26
 msgid "trailing spaces and dots will be removed from the filename"
 msgstr ""
 
 #. NOTE: rename preview: source -> destination
-#: i18n/po/../../farragone/core/rename.py:19
+#: i18n/po/../../farragone/core/rename.py:23
 #, python-brace-format
 msgid "{0} → {1}"
 msgstr ""
 
-#. NOTE: trying to rename to a file that already exists
-#: i18n/po/../../farragone/core/rename.py:75
+#: i18n/po/../../farragone/core/rename.py:80
 msgid "destination exists: {}"
 msgstr ""
 
-#. NOTE: warning detail for unknown fields; placeholders are the
-#. source filename and the field names
-#: i18n/po/../../farragone/core/rename.py:195
+#. NOTE: warning detail for unknown fields; placeholders are
+#. the source filename and the field names
+#: i18n/po/../../farragone/core/rename.py:207
 #, python-brace-format
 msgid "{0}: fields: {1}"
 msgstr ""
 
 #. NOTE: & marks keyboard accelerator
-#: i18n/po/../../farragone/ui/qt/preview.py:112
+#: i18n/po/../../farragone/ui/qt/preview.py:113
 msgid "&Preview"
 msgstr ""
 
 #. NOTE: & marks keyboard accelerator
-#: i18n/po/../../farragone/ui/qt/preview.py:150
+#: i18n/po/../../farragone/ui/qt/preview.py:151
 msgid "&Warnings"
 msgstr ""
 
 #. NOTE: & marks keyboard accelerator
-#: i18n/po/../../farragone/ui/qt/preview.py:190
+#: i18n/po/../../farragone/ui/qt/preview.py:191
 msgid "&Fields"
 msgstr ""
 
-#: i18n/po/../../farragone/ui/qt/preview.py:210
+#: i18n/po/../../farragone/ui/qt/preview.py:212
 #, python-brace-format
 msgid "{0} <font color=\"grey\">({1})</font>"
 msgstr ""
@@ -163,14 +162,14 @@ msgstr ""
 msgid "idle"
 msgstr ""
 
-#: i18n/po/../../farragone/ui/qt/run.py:238
+#: i18n/po/../../farragone/ui/qt/run.py:239
 msgid ""
 "Your settings have generated some warnings ({} total).  Check the 'Warnings' "
 "tab for details."
 msgstr ""
 
 #. NOTE: button label in confirmation dialogue
-#: i18n/po/../../farragone/ui/qt/run.py:242
+#: i18n/po/../../farragone/ui/qt/run.py:243
 msgid "&Run Anyway"
 msgstr ""
 
@@ -311,11 +310,11 @@ msgid "position"
 msgstr ""
 
 #. NOTE: UI section heading
-#: i18n/po/../../farragone/ui/qt/inp.py:433
-msgid "Template"
+#: i18n/po/../../farragone/ui/qt/inp.py:386
+msgid "Output Template"
 msgstr ""
 
-#: i18n/po/../../farragone/ui/qt/inp.py:446
+#: i18n/po/../../farragone/ui/qt/inp.py:399
 msgid "Destination path template"
 msgstr ""
 
@@ -395,7 +394,8 @@ msgid ""
 "\n"
 "<p>The first text entry decides which component to use, using a number "
 "starting from <b>0</b>.  Negative numbers start from the end of the path: "
-"<b>-1</b> is the base file or directory name.</p>\n"
+"<b>-1</b> is the base file or directory name.  Component <b>0</b> is the "
+"drive, if any (eg. <i>C:</i> on Windows).</p>\n"
 "\n"
 "<p>The second text entry is gives the field name.</p>\n"
 msgstr ""
@@ -561,7 +561,7 @@ msgstr ""
 #. NOTE: for warnings display, where there are extra warnings in
 #. a category not displayed; placeholder is how many of these
 #. there are
-#: i18n/po/../../farragone/util.py:181
+#: i18n/po/../../farragone/util.py:187
 msgid "(and {} more)"
 msgid_plural "(and {} more)"
 msgstr[0] ""

@@ -1,0 +1,22 @@
+This is a list of known bugs without known solutions or workarounds.
+
+For the 'ordering' field source, locale-aware sorting and case-sensitivity do
+not work as expected.  This may be a system-specific bug.
+
+When the window is maximised, the maximised state is correctly saved for the
+next time the application is run, but the new window size is also saved.  This
+becomes apparent on restarting the application and un-maximising the window.
+
+The position of the splitter separating the controls and the tabbed output
+section is saved when changed, but when restored on startup the value used is
+not exactly the same.
+
+Saving settings to disk should be rate-limited.  The problem becomes apparent
+when considering window size: if the window manager resizes the window for every
+mouse motion event, then settings may be saved very often while the window is
+being resized.
+
+Items added to sections in the controls region of UI (eg. file sources, field
+sources) do not cause their section to expand even if the item could use the
+space.  For example, adding a 'list' file source should cause the file sources
+section to expand and the other sections to shrink if they have empty space.
