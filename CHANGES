@@ -1,3 +1,6 @@
+0.2.1-next:
+ * regular expression gives a field for the whole match
+
 0.2.1:
  * support moving a directory between devices
  * display paths with '/' separators on Windows (looks nicer when we're using

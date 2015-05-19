@@ -46,7 +46,7 @@ fields_regex = _(r'''
 
 <p>The first text entry contains a (<a href="https://docs.python.org/3/library/re.html#regular-expression-syntax">Python flavour</a>) regular expression.  It is matched against the file or directory name, not the whole path, and is not implicitly anchored (eg. <i>tf</i> matches <i>testfile</i>).</p>
 
-<p>The second text entry gives the field names for positional groups.  The value entered is a prefix &ndash; for example, if there are three groups and the value is <i>testfield</i>, the strings captured will be placed in fields called <i>testfield1</i>,  <i>testfield2</i> and <i>testfield3</i>.</p>
+<p>The second text entry gives the field names for positional groups.  The value entered is a prefix &ndash; for example, if there are three groups and the value is <i>testfield</i>, the strings captured will be placed in fields called <i>testfield1</i>,  <i>testfield2</i> and <i>testfield3</i>, and the entire match is placed in a field called <i>testfield</i>.</p>
 
 <p>Field names may also be placed directly in the pattern using <code>?P&lt;name&gt;</code> &ndash; for example, <code>(?P&lt;start&gt;.*)-(?P&lt;end&gt;.*)</code> gives two fields, called <i>start</i> and <i>end</i>.</p>
 ''')

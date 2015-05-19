@@ -314,8 +314,9 @@ context: defines which part of the path to match against
 
 Fields come from groups in `pattern`; groups give field names with prefix
 `field_name_prefix` and suffix a number starting at 1, and named groups (eg.
-'(?P<name>[0-9]+)') also give fields named like the group.  Fields are missing
-for paths not matching `pattern`.
+'(?P<name>[0-9]+)') also give fields named like the group.  The whole pattern
+gives a field with name `field_name_prefix`.  Fields are missing for paths not
+matching `pattern`.
 
 Attributes:
 
@@ -333,8 +334,11 @@ regex: compiled regular expression
             regex = re.compile('')
 
         self._field_name_prefix = field_name_prefix
-        names = (list(regex.groupindex.keys()) +
-                 list(map(self._field_name, range(regex.groups))))
+        names = list(map(self._field_name, range(regex.groups)))
+        # no fields for positional groups if prefix is empty
+        if field_name_prefix:
+            names.append(field_name_prefix)
+            names.extend(regex.groupindex.keys())
         self._names = set(names)
         self.pattern = pattern
         self.regex = regex
@@ -381,8 +385,14 @@ regex: compiled regular expression
         except StopIteration:
             return {}
         else:
-            fields = {self._field_name(i): field
-                      for i, field in enumerate(match.groups())}
+            fields = {}
+            if self._field_name_prefix:
+                fields.update({self._field_name(i): field
+                               for i, field in enumerate(match.groups())})
+                try:
+                    fields[self._field_name_prefix] = match.group(0)
+                except IndexError:
+                    pass
             fields.update(match.groupdict())
             return fields
 
