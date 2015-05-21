@@ -7,6 +7,7 @@ version."""
 
 import string
 import re
+import os
 import locale
 from html import escape
 
@@ -204,8 +205,22 @@ Item states are dicts with 'input' being a `core.inputs.Input`.
                        data['text_widget'].toPlainText().splitlines())
         return {'input': core.inputs.StaticInput(*paths)}
 
+    # show a file dialogue and append selected files to a file list widget
+    def _list_browse (self, text_widget):
+        files = qt.QFileDialog.getOpenFileNames(
+            None, None, os.getcwd(),
+            options=qt.QFileDialog.HideNameFilterDetails
+        )[0]
+
+        if files:
+            text_widget.appendPlainText('\n'.join(files) + '\n')
+        text_widget.setFocus(qt.Qt.OtherFocusReason)
+
     def _new_list (self, changed):
+        layout = qt.QVBoxLayout()
+
         text = qt.QPlainTextEdit()
+        layout.addWidget(text)
         text.setLineWrapMode(qt.QPlainTextEdit.NoWrap)
         # QPlainTextEdit.setPlaceholderText is new in Qt 5.3
         try:
@@ -213,7 +228,16 @@ Item states are dicts with 'input' being a `core.inputs.Input`.
         except AttributeError:
             pass
         text.textChanged.connect(changed)
-        return {'data': {'text_widget': text}, 'item': text}
+
+        browse = widgets.mk_button(qt.QPushButton, {
+            # NOTE: label for a button that opens a file browser dialogue
+            'text': _('Browse...'),
+            'icon': 'document-open',
+            'clicked': lambda: self._list_browse(text)
+        })
+        layout.addWidget(browse)
+
+        return {'data': {'text_widget': text}, 'item': layout}
 
     def _get_glob_state (self, data):
         return {'input': core.inputs.GlobInput(data['text_widget'].text())}

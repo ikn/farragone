@@ -1,4 +1,5 @@
 0.2.1-next:
+ * allow opening a file dialogue for adding to the 'list' file source
  * regular expression gives a field for the whole match
 
 0.2.1:

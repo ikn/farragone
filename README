@@ -54,9 +54,3 @@ For help on using the application, use the 'What's This?' button located at the
 bottom of the main window and then select part of the UI to get documentation
 for.  (Alternatively, press shift + F1 while the part of the UI to get
 documentation for is focused.)
-
-    KNOWN ISSUES
-
-When installing to a path that doesn't contain the 'hicolor' icon theme's
-'index.theme' file (often /usr/local), the window icon is not set properly.
-This is due to a bug in Qt 5 (https://bugreports.qt.io/browse/QTBUG-44107).

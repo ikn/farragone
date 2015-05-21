@@ -11,12 +11,11 @@ The position of the splitter separating the controls and the tabbed output
 section is saved when changed, but when restored on startup the value used is
 not exactly the same.
 
+When installing to a path that doesn't contain the 'hicolor' icon theme's
+'index.theme' file (often /usr/local), the window icon is not set properly.
+This is due to a bug in Qt 5 (https://bugreports.qt.io/browse/QTBUG-44107).
+
 Saving settings to disk should be rate-limited.  The problem becomes apparent
 when considering window size: if the window manager resizes the window for every
 mouse motion event, then settings may be saved very often while the window is
 being resized.
-
-Items added to sections in the controls region of UI (eg. file sources, field
-sources) do not cause their section to expand even if the item could use the
-space.  For example, adding a 'list' file source should cause the file sources
-section to expand and the other sections to shrink if they have empty space.
