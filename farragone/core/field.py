@@ -312,6 +312,8 @@ field_name_prefix: string giving the prefix for the field name for unnamed
                    groups
 context: defines which part of the path to match against
 
+Matching is case-insensitive.
+
 Fields come from groups in `pattern`; groups give field names with prefix
 `field_name_prefix` and suffix a number starting at 1, and named groups (eg.
 '(?P<name>[0-9]+)') also give fields named like the group.  The whole pattern
@@ -328,7 +330,7 @@ regex: compiled regular expression
     def __init__ (self, pattern, field_name_prefix, context=Context.NAME):
         pattern_err = None
         try:
-            regex = re.compile(pattern)
+            regex = re.compile(pattern, re.IGNORECASE)
         except re.error as e:
             pattern_err = e
             regex = re.compile('')
