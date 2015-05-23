@@ -1,4 +1,5 @@
 0.2.1-next:
+ * padding options for the 'ordering' field source
  * allow opening a file dialogue for adding to the 'list' file source
  * add path context dropdown for 'ordering' and 'regular expression' field
    sources

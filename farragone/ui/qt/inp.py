@@ -12,6 +12,7 @@ import locale
 from html import escape
 
 from ... import util, conf, core
+from ...core.field import Alignments
 from . import doc, qt, widgets
 
 
@@ -34,6 +35,82 @@ class FieldContext (qt.QComboBox):
     def context (self):
         """Get the currently selected `Context`."""
         return self.currentData()
+
+
+class OrderingPadding (qt.QGridLayout):
+    """Layout containing widgets for 'ordering' field padding settings.
+
+changed: function to call when any settings change
+
+"""
+
+    # icon names by `Alignment` instance
+    ALIGNMENT_ICONS = {
+        Alignments.right: 'format-justify-right',
+        Alignments.centre: 'format-justify-center',
+        Alignments.left: 'format-justify-left'
+    }
+
+    def __init__ (self, changed):
+        qt.QGridLayout.__init__(self)
+        self._options = []
+        self._enabled = enabled = qt.QCheckBox(_('Padding'))
+        self.addWidget(enabled, 0, 0, 1, 3)
+        enabled.setToolTip(_('Add padding around the number within the field'))
+        enabled.stateChanged.connect(lambda: self._toggle(changed))
+
+        self._char = char = qt.QLineEdit()
+        self._options.append(char)
+        char.setPlaceholderText(_('Padding character'))
+        char.setMaxLength(1)
+        char.setText('0')
+        char.textChanged.connect(changed)
+
+        self._align = align = qt.QComboBox()
+        self._options.append(align)
+        align.setToolTip(_('Alignment of the number within the field value'))
+        widgets.add_combobox_items(align, *(
+            {
+                'icon': self.ALIGNMENT_ICONS[alignment],
+                qt.Qt.UserRole: alignment,
+                qt.Qt.DisplayRole: alignment.name
+            } for alignment in core.field.all_alignments
+        ))
+        align.currentIndexChanged.connect(changed)
+
+        self._size = size = qt.QSpinBox()
+        self._options.append(size)
+        size.setRange(1, 99)
+        size.setValue(3)
+        size.setToolTip(_('Minimum padded size'))
+        size.valueChanged.connect(changed)
+
+        for i, w in enumerate(self._options):
+            self.addWidget(w, 1, i)
+        self._toggle(lambda: None)
+
+    def _is_enabled (self):
+        return self._enabled.isChecked()
+
+    # called when padding is enabled or disabled
+    def _toggle (self, changed):
+        enabled = self._is_enabled()
+        for w in self._options:
+            w.setEnabled(enabled)
+        changed()
+
+    def get_fmt (self):
+        """Get a formatting function for the current settings.
+
+For use as the `fmt` argument to `Ordering`.
+
+"""
+        if self._is_enabled():
+            return core.field.Ordering.padding_fmt(
+                self._char.text() or ' ', self._align.currentData(),
+                self._size.value())
+        else:
+            return str
 
 
 class Dynamic:
@@ -407,7 +484,8 @@ Item states are dicts with 'fields' being a `core.field.Fields`.
         return {'fields': core.field.Ordering(
             field_name=data['field_widget'].text(), key=key,
             reverse=not data['ascending_widget'].isChecked(),
-            context=data['context_widget'].context
+            context=data['context_widget'].context,
+            fmt=data['pad'].get_fmt()
         )}
 
     def _new_ordering (self, changed):
@@ -432,11 +510,15 @@ Item states are dicts with 'fields' being a `core.field.Fields`.
         field.setPlaceholderText(_('Field name'))
         field.textChanged.connect(changed)
 
+        pad = OrderingPadding(changed)
+        layout.addLayout(pad, 2, 0, 1, 2)
+
         return {'data': {
             'casesensitive_widget': case_sensitive,
             'ascending_widget': ascending,
             'context_widget': context,
-            'field_widget': field
+            'field_widget': field,
+            'pad': pad
         }, 'item': layout, 'focus': field}
 
 

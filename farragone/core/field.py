@@ -16,6 +16,37 @@ from .. import util
 from . import db
 
 
+class Alignment:
+    """Definition of the alignment of a string when formatting with padding.
+
+name: alignment display name
+fmt: character for use in a string formatting specification
+
+Attributes:
+
+name, fmt: as passed to the contstructor
+
+"""
+
+    def __init__ (self, name, fmt):
+        self.name = name
+        self.fmt = fmt
+
+
+# `Alignment` instances enum
+class Alignments:
+    # NOTE: padding alignment option
+    right = Alignment(_('Right'), '>')
+    # NOTE: padding alignment option
+    left = Alignment(_('Left'), '<')
+    # NOTE: padding alignment option
+    centre = Alignment(_('Center'), '^')
+
+
+# sequence of `Alignment` instances, ordered by importance
+all_alignments = (Alignments.right, Alignments.left, Alignments.centre)
+
+
 class Context:
     """Definition of a function used to define the part of a path that is
 relevant for a field retrieval method.
@@ -434,25 +465,42 @@ field_name: name to give the retrieved field
 key: standard 'key function' for sorting
 reverse: whether to reverse the sort order
 context: `Context` defining which part of the path to pass to `key`
+fmt: function to use to format the ordered index to generate the string field
+     value
 
-The field value is a number starting at 1 (as a string).
+The field value is a number starting at 1 (after running through `fmt`).
 
 Attributes:
 
-key, reverse, context: as passed to the constructor
+key, reverse, context, fmt: as passed to the constructor
 
 """
 
     def __init__ (self, field_name, key=locale.strxfrm, reverse=False,
-                  context=Contexts.NAME):
+                  context=Contexts.NAME, fmt=str):
         self._name = field_name
         self.key = key
         self.reverse = reverse
         self.context = context
+        self.fmt = fmt
 
     def __str__ (self):
         # NOTE: used to refer to a particular field source
         return _('ordering, field name: {}').format(repr(self._name))
+
+    @staticmethod
+    def padding_fmt (char='0', align=Alignments.right, size=3):
+        """Make a formatting function that adds padding to the ordered index.
+
+char: character used to pad the number (string must have length 1)
+align: `Alignment` instance used to determine the position of the number within
+       the padded string
+size: minimum number of characters in the padded string (greater than 0)
+
+For use as the `fmt` argument to the constructor
+
+"""
+        return ('{:' + '{}{}{}'.format(char, align.fmt, size) + '}').format
 
     @property
     def names (self):
@@ -466,8 +514,9 @@ key, reverse, context: as passed to the constructor
 
     def evaluate_stored (self, odb):
         odb.sort()
+        fmt = self.fmt
         for index, path in odb.get_sorted():
-            yield (path, {self._name: str(index)})
+            yield (path, {self._name: fmt(index)})
 
     def cleanup (self, odb):
         odb.close()
