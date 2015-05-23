@@ -200,6 +200,9 @@ Item states are dicts with 'input' being a `core.inputs.Input`.
             }
         ], _('Add a source of files'), _('Remove this source of files'))
 
+        # if None, should use cwd
+        self._last_file_browser_dir = None
+
     def _get_list_state (self, data):
         paths = filter(lambda path: path,
                        data['text_widget'].toPlainText().splitlines())
@@ -207,14 +210,18 @@ Item states are dicts with 'input' being a `core.inputs.Input`.
 
     # show a file dialogue and append selected files to a file list widget
     def _list_browse (self, text_widget):
-        files = qt.QFileDialog.getOpenFileNames(
-            None, None, os.getcwd(),
-            options=qt.QFileDialog.HideNameFilterDetails
-        )[0]
+        # can't use a static function since we need the current dir afterwards
+        fd_dir = (os.getcwd() if self._last_file_browser_dir is None
+                  else self._last_file_browser_dir)
+        fd = qt.QFileDialog(directory=fd_dir)
+        fd.setFileMode(qt.QFileDialog.ExistingFiles)
+        fd.setOptions(qt.QFileDialog.HideNameFilterDetails)
 
-        if files:
+        if fd.exec():
+            files = fd.selectedFiles()
+            self._last_file_browser_dir = fd.directory().absolutePath()
             text_widget.appendPlainText('\n'.join(files) + '\n')
-        text_widget.setFocus(qt.Qt.OtherFocusReason)
+            text_widget.setFocus(qt.Qt.OtherFocusReason)
 
     def _new_list (self, changed):
         layout = qt.QVBoxLayout()
