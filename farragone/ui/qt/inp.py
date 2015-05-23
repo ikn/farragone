@@ -15,6 +15,27 @@ from ... import util, conf, core
 from . import doc, qt, widgets
 
 
+class FieldContext (qt.QComboBox):
+    """A combo box widget providing a choice of field `Context`."""
+
+    def __init__ (self):
+        qt.QComboBox.__init__(self)
+        self.setToolTip(_('The part of the path to work with'))
+
+        widgets.add_combobox_items(self, *(
+            {
+                qt.Qt.UserRole: context,
+                qt.Qt.DisplayRole: context.name,
+                qt.Qt.ToolTipRole: context.desc
+            } for context in core.field.all_contexts
+        ))
+
+    @property
+    def context (self):
+        """Get the currently selected `Context`."""
+        return self.currentData()
+
+
 class Dynamic:
     """Has a 'new_widget' signal for when a widget is added.
 
@@ -316,9 +337,10 @@ Item states are dicts with 'fields' being a `core.field.Fields`.
                         for item in self.items), []))
 
     def _get_component_state (self, data):
-        field_name = data['field_widget'].text()
-        idx = data['index_widget'].text()
-        return {'fields': core.field.PathComponent(field_name, idx)}
+        return {'fields': core.field.PathComponent(
+            field_name=data['field_widget'].text(),
+            index=data['index_widget'].text()
+        )}
 
     def _new_component (self, changed):
         layout = qt.QHBoxLayout()
@@ -343,20 +365,26 @@ Item states are dicts with 'fields' being a `core.field.Fields`.
 
     def _get_regex_state (self, data):
         return {'fields': core.field.RegexGroups(
-            data['text_widget'].text(), data['field_widget'].text()
+            pattern=data['text_widget'].text(),
+            field_name_prefix=data['field_widget'].text(),
+            context=data['context_widget'].context
         )}
 
     def _new_regex (self, changed):
-        layout = qt.QHBoxLayout()
+        layout = qt.QGridLayout()
 
         text = qt.QLineEdit()
-        layout.addWidget(text, 3) # 3 times the size of the field name entry
+        layout.addWidget(text, 0, 0, 1, 2)
         # NOTE: default value for the 'Regular Expression' field source; 'ext'
         # means file extension
         text.setText(_('(?P<name>.*)\.(?P<ext>[^.]*)'))
         text.textChanged.connect(changed)
+
+        context = FieldContext()
+        layout.addWidget(context, 1, 0, 1, 1)
+        context.currentIndexChanged.connect(changed)
         field = qt.QLineEdit()
-        layout.addWidget(field, 1)
+        layout.addWidget(field, 1, 1, 1, 1)
         # NOTE: default value for the field name for the 'Path Component' field
         # source
         field.setText(_('group'))
@@ -365,18 +393,22 @@ Item states are dicts with 'fields' being a `core.field.Fields`.
 
         return {'data': {
             'text_widget': text,
+            'context_widget': context,
             'field_widget': field
         }, 'item': layout, 'focus': text}
 
     def _get_ordering_state (self, data):
-        field_name = data['field_widget'].text()
         key = (
             locale.strxfrm
             if data['casesensitive_widget'].isChecked()
             else lambda s: locale.strxfrm(s.lower())
         )
-        reverse = not data['ascending_widget'].isChecked()
-        return {'fields': core.field.Ordering(field_name, key, reverse)}
+
+        return {'fields': core.field.Ordering(
+            field_name=data['field_widget'].text(), key=key,
+            reverse=not data['ascending_widget'].isChecked(),
+            context=data['context_widget'].context
+        )}
 
     def _new_ordering (self, changed):
         layout = qt.QGridLayout()
@@ -390,17 +422,21 @@ Item states are dicts with 'fields' being a `core.field.Fields`.
         ascending.setChecked(True)
         ascending.stateChanged.connect(changed)
 
+        context = FieldContext()
+        layout.addWidget(context, 1, 0, 1, 1)
+        context.currentIndexChanged.connect(changed)
         field = qt.QLineEdit()
-        layout.addWidget(field, 1, 0, 1, 2)
+        layout.addWidget(field, 1, 1, 1, 1)
         # NOTE: default value for the field name for the 'Ordering' field source
         field.setText(_('position'))
         field.setPlaceholderText(_('Field name'))
         field.textChanged.connect(changed)
 
         return {'data': {
-            'field_widget': field,
             'casesensitive_widget': case_sensitive,
-            'ascending_widget': ascending
+            'ascending_widget': ascending,
+            'context_widget': context,
+            'field_widget': field
         }, 'item': layout, 'focus': field}
 
 

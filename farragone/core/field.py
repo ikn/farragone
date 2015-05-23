@@ -17,17 +17,45 @@ from . import db
 
 
 class Context:
-    """Collection of functions used to define the part of a path that is
-relevant for a field retrieval method."""
+    """Definition of a function used to define the part of a path that is
+relevant for a field retrieval method.
 
-    """Whole path."""
-    PATH = lambda path: path
+name: context display name
+f: function to be called with a path to retrieve the relevant part
+desc: full description of the context
 
-    """Path excluding the filename."""
-    DIR = lambda path: os_path.dirname(path)
+May be called with a path to return the relevant part.
 
-    """Filename."""
-    NAME = lambda path: os_path.basename(path)
+Attributes:
+
+name, desc: as passed to the contstructor
+
+"""
+
+    def __init__ (self, name, f, desc):
+        self.name = name
+        self.desc = desc
+        self._f = f
+
+    def __call__ (self, path):
+        return self._f(path)
+
+
+# `Context` instances enum
+class Contexts:
+    # NOTE: as in file path
+    PATH = Context(_('Path'), lambda path: path,
+                   # NOTE: as in file path
+                   _('The full path'))
+    # NOTE: as in file/directory name
+    NAME = Context(_('Name'), lambda path: os_path.basename(path),
+                   _('Just the name of the file or directory'))
+    DIR = Context(_('Directory'), lambda path: os_path.dirname(path),
+                  _('The path excluding the filename'))
+
+
+# sequence of `Context` instances, ordered by importance
+all_contexts = (Contexts.NAME, Contexts.PATH, Contexts.DIR)
 
 
 class Fields (metaclass=abc.ABCMeta):
@@ -310,7 +338,7 @@ class RegexGroups (SimpleEvalFields):
 pattern: regular expression as a string; not implicitly anchored
 field_name_prefix: string giving the prefix for the field name for unnamed
                    groups
-context: defines which part of the path to match against
+context: `Context` defining which part of the path to match against
 
 Matching is case-insensitive.
 
@@ -327,7 +355,7 @@ regex: compiled regular expression
 
 """
 
-    def __init__ (self, pattern, field_name_prefix, context=Context.NAME):
+    def __init__ (self, pattern, field_name_prefix, context=Contexts.NAME):
         pattern_err = None
         try:
             regex = re.compile(pattern, re.IGNORECASE)
@@ -405,7 +433,7 @@ class Ordering (ComplexEvalFields):
 field_name: name to give the retrieved field
 key: standard 'key function' for sorting
 reverse: whether to reverse the sort order
-context: defines which part of the path to pass to `key`
+context: `Context` defining which part of the path to pass to `key`
 
 The field value is a number starting at 1 (as a string).
 
@@ -416,7 +444,7 @@ key, reverse, context: as passed to the constructor
 """
 
     def __init__ (self, field_name, key=locale.strxfrm, reverse=False,
-                  context=Context.NAME):
+                  context=Contexts.NAME):
         self._name = field_name
         self.key = key
         self.reverse = reverse
