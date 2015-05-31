@@ -96,7 +96,7 @@ changed: function to call when any settings change
     def _toggle (self, changed):
         enabled = self._is_enabled()
         for w in self._options:
-            w.setEnabled(enabled)
+            w.setVisible(enabled)
         changed()
 
     def get_fmt (self):
