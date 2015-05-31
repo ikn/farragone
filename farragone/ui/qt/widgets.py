@@ -7,6 +7,7 @@ version."""
 
 import itertools
 from collections import deque
+import os
 
 from ... import util
 from ...conf import settings
@@ -30,6 +31,23 @@ def first_layout_widget (layout):
         return None
 
 
+def setup_button (b, defn):
+    """Set properties of a QAbstractButton.
+
+b: QAbstractButton
+defn: as taken by `mk_button`
+
+"""
+    if 'text' in defn:
+        b.setText(defn['text'])
+    if 'icon' in defn:
+        b.setIcon(qt.QIcon.fromTheme(defn['icon']))
+    if 'tooltip' in defn:
+        b.setToolTip(defn['tooltip'])
+    if 'clicked' in defn:
+        b.clicked.connect(defn['clicked'])
+
+
 def mk_button (cls, defn):
     """Create a QAbstractButton.
 
@@ -42,14 +60,7 @@ defn: dict with optional keys:
 
 """
     b = cls()
-    if 'text' in defn:
-        b.setText(defn['text'])
-    if 'icon' in defn:
-        b.setIcon(qt.QIcon.fromTheme(defn['icon']))
-    if 'tooltip' in defn:
-        b.setToolTip(defn['tooltip'])
-    if 'clicked' in defn:
-        b.clicked.connect(defn['clicked'])
+    setup_button(b, defn)
     return b
 
 
@@ -493,3 +504,50 @@ response: The index of the selected button in btns.
             settings['disabled_warnings'] |= {setting_key}
 
     return response
+
+
+class DirButton (qt.QPushButton):
+    """A widget for selecting a single directory and displaying the current
+choice.
+
+path: the initial directory to use
+
+"""
+
+    # emitted when the selected directory changes
+    changed = qt.pyqtSignal()
+
+    def __init__ (self, path):
+        qt.QPushButton.__init__(self)
+        setup_button(self, {
+            'icon': 'folder',
+            'tooltip': _('Click to change the selected directory'),
+            'clicked': self._choose
+        })
+        self.path = path
+
+    @property
+    def path (self):
+        """The current directory.
+
+Setting this changes the displayed value.
+
+"""
+        return self._path
+
+    @path.setter
+    def path (self, path):
+        self._path = os.path.abspath(path)
+        name = os.path.basename(self._path)
+        # show '/', 'C:\', etc.
+        self.setText(name if name else self.path)
+        self.changed.emit()
+
+    def _choose (self):
+        # ask the user to choose a new directory using a file dialogue
+        fd = qt.QFileDialog(self, directory=os.path.dirname(self._path))
+        fd.setFileMode(qt.QFileDialog.Directory)
+        fd.setOptions(qt.QFileDialog.ShowDirsOnly)
+        fd.selectFile(self._path)
+        if fd.exec():
+            self.path = fd.selectedFiles()[0]

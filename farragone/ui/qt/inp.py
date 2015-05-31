@@ -144,7 +144,7 @@ types: sequence of definitions of types of items, where the order is preserved
             data: passed to `get_state`
             item: the created item (QWidget or QLayout)
             focus: widget to focus when added (default: `item`)
-    get_state: optional function called with `data` returned by `create` which
+    getstate: optional function called with `data` returned by `create` which
                returns a representation of the item's current state
 add_tooltip: tooltip for the button to add an item
 rm_tooltip: tooltip for the button to remove an item
@@ -158,11 +158,15 @@ items: sequence of current items, each a dict with keys:
     type: type['id']
     item: from `create`
     data: from `create`
-    state: from `get_state`
+    state: from `getstate`
 
 """
 
+    # runs getstate for all items
+    _refresh = qt.pyqtSignal()
+
     def __init__ (self, types, add_tooltip, rm_tooltip):
+        Dynamic.__init__(self)
         Changing.__init__(self)
         qt.QVBoxLayout.__init__(self)
 
@@ -240,10 +244,12 @@ items: sequence of current items, each a dict with keys:
             'type': item_type,
             'data': result['data'],
             'header': header,
-            'item': widget
+            'item': widget,
+            'changed': changed
         }
 
         self.items.append(item)
+        self._refresh.connect(changed)
         changed()
         self.new_widget.emit()
 
@@ -253,11 +259,19 @@ items: sequence of current items, each a dict with keys:
         self.items.remove(item)
         self.removeWidget(item['item'])
         item['item'].deleteLater()
+        self._refresh.disconnect(item['changed'])
         self.changed.emit()
+
+
+    def refresh (self):
+        """Run the `getstate` function for all items."""
+        self._refresh.emit()
 
 
 class FilesSection (CustomList):
     """UI section for selecting input paths.
+
+cwd: CWDSection
 
 Item states are dicts with 'input' being a `core.inputs.Input`.
 
@@ -267,7 +281,7 @@ Item states are dicts with 'input' being a `core.inputs.Input`.
     name = _('Files')
     doc = doc.files_section
 
-    def __init__ (self):
+    def __init__ (self, cwd):
         CustomList.__init__(self, [
             {
                 'id': 'glob',
@@ -298,6 +312,8 @@ Item states are dicts with 'input' being a `core.inputs.Input`.
             }
         ], _('Add a source of files'), _('Remove this source of files'))
 
+        self._cwd = cwd
+        cwd.changed.connect(self.refresh)
         # if None, should use cwd
         self._last_file_browser_dir = None
 
@@ -309,7 +325,7 @@ Item states are dicts with 'input' being a `core.inputs.Input`.
     # show a file dialogue and append selected files to a file list widget
     def _list_browse (self, text_widget):
         # can't use a static function since we need the current dir afterwards
-        fd_dir = (os.getcwd() if self._last_file_browser_dir is None
+        fd_dir = (self._cwd.path if self._last_file_browser_dir is None
                   else self._last_file_browser_dir)
         fd = qt.QFileDialog(directory=fd_dir)
         fd.setFileMode(qt.QFileDialog.ExistingFiles)
@@ -345,7 +361,8 @@ Item states are dicts with 'input' being a `core.inputs.Input`.
         return {'data': {'text_widget': text}, 'item': layout}
 
     def _get_glob_state (self, data):
-        return {'input': core.inputs.GlobInput(data['text_widget'].text())}
+        inp = core.inputs.GlobInput(data['text_widget'].text(), self._cwd.path)
+        return {'input': inp}
 
     def _new_glob (self, changed):
         text = qt.QLineEdit()
@@ -358,7 +375,7 @@ Item states are dicts with 'input' being a `core.inputs.Input`.
 
     def _get_recursive_state (self, data):
         path = data['text_widget'].text()
-        return {'input': core.inputs.RecursiveFilesInput(path)}
+        return {'input': core.inputs.RecursiveFilesInput(path, self._cwd.path)}
 
     def _new_recursive (self, changed):
         text = qt.QLineEdit()
@@ -550,6 +567,25 @@ template: `string.Template`
         changed_text('')
 
 
+class CWDSection (Changing, qt.QVBoxLayout):
+    """UI section for setting the current working directory."""
+
+    # NOTE: UI section heading
+    name = _('Working Directory')
+
+    def __init__ (self):
+        qt.QVBoxLayout.__init__(self)
+        self._cwd = cwd = widgets.DirButton(os.getcwd())
+        cwd.setWhatsThis(doc.cwd_section)
+        cwd.changed.connect(self.changed.emit)
+        self.addWidget(cwd)
+
+    @property
+    def path (self):
+        """Path to the chosen directory."""
+        return self._cwd.path
+
+
 class Input (qt.QScrollArea):
     """Section of the UI with controls for defining the renaming scheme.
 
@@ -558,6 +594,7 @@ Attributes:
 files: FilesSection
 fields: FieldsSection
 template: TemplateSection
+cwd: CWDSection
 
 """
 
@@ -567,7 +604,9 @@ template: TemplateSection
         self.setWidgetResizable(True)
         self.setFrameShape(qt.QFrame.NoFrame)
 
-        self.files = FilesSection()
+        self.cwd = CWDSection()
+        self.cwd.changed.connect(changed)
+        self.files = FilesSection(self.cwd)
         self.files.new_widget.connect(new_widget)
         self.files.changed.connect(changed)
         self.fields = FieldsSection()
@@ -582,6 +621,7 @@ template: TemplateSection
         self.add_section(self.files)
         self.add_section(self.fields)
         self.add_section(self.template)
+        self.add_section(self.cwd)
 
     def add_section (self, section):
         group = qt.QGroupBox(section.name)
@@ -607,14 +647,16 @@ all_fields: `core.inputs.FieldCombination` containing all fields in `field_sets`
     def gather (self):
         """Return data defining the renaming scheme.
 
-Returns `(inps, fields, template)`, where:
+Returns `(inps, fields, template, cwd)`, where:
 
 inps: sequence of `core.inputs.Input`
 fields: `core.inputs.Fields`
 template: `string.Template` for the output path
+cwd: path for the current working directory to use for relative paths
 
 """
         inps = [f['state']['input'] for f in self.files.items]
         fields = self.gather_fields()[1]
         template = self.template.template
-        return (inps, fields, template)
+        cwd = self.cwd.path
+        return (inps, fields, template, cwd)

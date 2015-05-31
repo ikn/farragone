@@ -69,6 +69,11 @@ template = _(r'''
 ''')
 
 
+cwd_section = _(r'''
+<p>The base directory for all relative paths used in the 'Files' and 'Output Template' sections.  For example, if the working directory is set to <i>/some/dir</i>, then the path <i>../test.txt</i> means <i>/some/test.txt</i>.</p>
+''')
+
+
 preview_renames = _(r'''
 <p>This view shows rename operations that will happen with the current settings.  It updates as you make changes, so if it's empty it may be that none of your file sources match any files.</p>
 

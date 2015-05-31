@@ -1,6 +1,7 @@
 0.2.1-next:
  * padding options for the 'ordering' field source
  * allow opening a file dialogue for adding to the 'list' file source
+ * allow changing the base directory that paths are relative to
  * add path context dropdown for 'ordering' and 'regular expression' field
    sources
  * regular expression gives a field for the whole match
