@@ -27,21 +27,15 @@ def preview_rename (frm, to):
 comparable_path = os.path.normcase
 
 
-def _get_abs_path (path, cwd=None):
+def _get_abs_path (path, cwd):
     """Make a path absolute.
 
 path: relative or absolute path
-cwd: directory that `path` is relative to (default: Python process's current
-     working directory)
+cwd: directory that `path` is relative to; must be absolute
 
 """
     path = os.path.expanduser(path)
-    abs_path = os.path.abspath(path)
-    return (
-        os.path.normpath(os.path.join(cwd, path))
-        if cwd is not None and abs_path != path
-        else abs_path
-    )
+    return os.path.normpath(os.path.join(cwd, path))
 
 
 def parents (path, include_full=False, allow_empty=True):
@@ -184,8 +178,9 @@ Returns `(renames, done)` like `get_renames`; `renames` yields
 instances (empty if `with_warnings` is False).
 
 """
-    if cwd is not None:
-        cwd = os.path.abspath(cwd)
+    if cwd is None:
+        cwd = os.getcwd()
+    cwd = os.path.abspath(cwd)
 
     paths = itertools.chain.from_iterable(inps)
     abs_paths = map(lambda path: _get_abs_path(path, cwd), paths)
