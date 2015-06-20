@@ -1,4 +1,4 @@
-0.2.1-next:
+0.2.2:
  * padding options for the 'ordering' field source
  * allow opening a file dialogue for adding to the 'list' file source
  * allow changing the base directory that paths are relative to

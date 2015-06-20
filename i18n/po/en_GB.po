@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 0.2.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-05-23 18:30+0100\n"
+"POT-Creation-Date: 2015-06-20 11:20+0100\n"
 "PO-Revision-Date: 2015-02-08 13:49+0000\n"
 "Last-Translator: Joseph Lansdowne <ikn@ikn.org.uk>\n"
 "Language: en_GB\n"
@@ -110,13 +110,13 @@ msgstr "trailing spaces and dots will be removed from the filename"
 msgid "{0} → {1}"
 msgstr "{0} → {1}"
 
-#: i18n/po/../../farragone/core/rename.py:80
+#: i18n/po/../../farragone/core/rename.py:74
 msgid "destination exists: {}"
 msgstr "destination exists: {}"
 
 #. NOTE: warning detail for unknown fields; placeholders are
 #. the source filename and the field names
-#: i18n/po/../../farragone/core/rename.py:207
+#: i18n/po/../../farragone/core/rename.py:202
 #, python-brace-format
 msgid "{0}: fields: {1}"
 msgstr "{0}: fields: {1}"
@@ -241,156 +241,161 @@ msgid "Minimum padded size"
 msgstr "Minimum padded size"
 
 #. NOTE: UI section heading
-#: i18n/po/../../farragone/ui/qt/inp.py:267
+#: i18n/po/../../farragone/ui/qt/inp.py:281
 msgid "Files"
 msgstr "Files"
 
 #. NOTE: file source type name
-#: i18n/po/../../farragone/ui/qt/inp.py:275
+#: i18n/po/../../farragone/ui/qt/inp.py:289
 msgid "Pattern"
 msgstr "Pattern"
 
-#: i18n/po/../../farragone/ui/qt/inp.py:276
+#: i18n/po/../../farragone/ui/qt/inp.py:290
 msgid "Use a glob-style pattern"
 msgstr "Use a glob-style pattern"
 
 #. NOTE: file source type name
-#: i18n/po/../../farragone/ui/qt/inp.py:283
+#: i18n/po/../../farragone/ui/qt/inp.py:297
 msgid "List"
 msgstr "List"
 
-#: i18n/po/../../farragone/ui/qt/inp.py:284
+#: i18n/po/../../farragone/ui/qt/inp.py:298
 msgid "Specify files manually"
 msgstr "Specify files manually"
 
 #. NOTE: file source type name
-#: i18n/po/../../farragone/ui/qt/inp.py:291
+#: i18n/po/../../farragone/ui/qt/inp.py:305
 msgid "Recursive Files"
 msgstr "Recursive Files"
 
-#: i18n/po/../../farragone/ui/qt/inp.py:293
+#: i18n/po/../../farragone/ui/qt/inp.py:307
 msgid "Specify a directory in which to find files recursively"
 msgstr "Specify a directory in which to find files recursively"
 
-#: i18n/po/../../farragone/ui/qt/inp.py:299
+#: i18n/po/../../farragone/ui/qt/inp.py:313
 msgid "Add a source of files"
 msgstr "Add a source of files"
 
-#: i18n/po/../../farragone/ui/qt/inp.py:299
+#: i18n/po/../../farragone/ui/qt/inp.py:313
 msgid "Remove this source of files"
 msgstr "Remove this source of files"
 
-#: i18n/po/../../farragone/ui/qt/inp.py:332
+#: i18n/po/../../farragone/ui/qt/inp.py:348
 msgid "List of files, one per line"
 msgstr "List of files, one per line"
 
 #. NOTE: label for a button that opens a file browser dialogue
-#: i18n/po/../../farragone/ui/qt/inp.py:339
+#: i18n/po/../../farragone/ui/qt/inp.py:355
 msgid "Browse..."
 msgstr "Browse..."
 
-#: i18n/po/../../farragone/ui/qt/inp.py:352
+#: i18n/po/../../farragone/ui/qt/inp.py:369
 msgid "Glob-style pattern"
 msgstr "Glob-style pattern"
 
 #. NOTE: default value for the 'Pattern' file source; 'ext' means file
 #. extension
-#: i18n/po/../../farragone/ui/qt/inp.py:355
+#: i18n/po/../../farragone/ui/qt/inp.py:372
 msgid "*.ext"
 msgstr "*.ext"
 
-#: i18n/po/../../farragone/ui/qt/inp.py:365
+#: i18n/po/../../farragone/ui/qt/inp.py:382
 msgid "Directory path"
 msgstr "Directory path"
 
 #. NOTE: UI section heading
-#: i18n/po/../../farragone/ui/qt/inp.py:378
+#: i18n/po/../../farragone/ui/qt/inp.py:395
 msgid "Fields"
 msgstr "Fields"
 
 #. NOTE: field source type name
-#: i18n/po/../../farragone/ui/qt/inp.py:386
+#: i18n/po/../../farragone/ui/qt/inp.py:403
 msgid "Path Component"
 msgstr "Path Component"
 
-#: i18n/po/../../farragone/ui/qt/inp.py:388
+#: i18n/po/../../farragone/ui/qt/inp.py:405
 msgid "Use the filename or a directory from the path"
 msgstr "Use the filename or a directory from the path"
 
 #. NOTE: field source type name
-#: i18n/po/../../farragone/ui/qt/inp.py:395
+#: i18n/po/../../farragone/ui/qt/inp.py:412
 msgid "Regular Expression"
 msgstr "Regular Expression"
 
 #. NOTE: field source type name
-#: i18n/po/../../farragone/ui/qt/inp.py:403
+#: i18n/po/../../farragone/ui/qt/inp.py:420
 msgid "Ordering"
 msgstr "Ordering"
 
-#: i18n/po/../../farragone/ui/qt/inp.py:404
+#: i18n/po/../../farragone/ui/qt/inp.py:421
 msgid "Use the position when the files are ordered"
 msgstr "Use the position when the files are ordered"
 
-#: i18n/po/../../farragone/ui/qt/inp.py:409
+#: i18n/po/../../farragone/ui/qt/inp.py:426
 msgid "Add a source of fields"
 msgstr "Add a source of fields"
 
-#: i18n/po/../../farragone/ui/qt/inp.py:409
+#: i18n/po/../../farragone/ui/qt/inp.py:426
 msgid "Remove this source of fields"
 msgstr "Remove this source of fields"
 
-#: i18n/po/../../farragone/ui/qt/inp.py:428
+#: i18n/po/../../farragone/ui/qt/inp.py:445
 msgid "Path component index"
 msgstr "Path component index"
 
 #. NOTE: default value for the field name for the 'Path Component' field
 #. source
-#: i18n/po/../../farragone/ui/qt/inp.py:434
+#: i18n/po/../../farragone/ui/qt/inp.py:451
 msgid "name"
 msgstr "name"
 
-#: i18n/po/../../farragone/ui/qt/inp.py:435
-#: i18n/po/../../farragone/ui/qt/inp.py:468
-#: i18n/po/../../farragone/ui/qt/inp.py:510
+#: i18n/po/../../farragone/ui/qt/inp.py:452
+#: i18n/po/../../farragone/ui/qt/inp.py:485
+#: i18n/po/../../farragone/ui/qt/inp.py:527
 msgid "Field name"
 msgstr "Field name"
 
 #. NOTE: default value for the 'Regular Expression' field source; 'ext'
 #. means file extension
-#: i18n/po/../../farragone/ui/qt/inp.py:457
+#: i18n/po/../../farragone/ui/qt/inp.py:474
 msgid "(?P<name>.*)\\.(?P<ext>[^.]*)"
 msgstr "(?P<name>.*)\\.(?P<ext>[^.]*)"
 
 #. NOTE: default value for the field name for the 'Path Component' field
 #. source
-#: i18n/po/../../farragone/ui/qt/inp.py:467
+#: i18n/po/../../farragone/ui/qt/inp.py:484
 msgid "group"
 msgstr "group"
 
-#: i18n/po/../../farragone/ui/qt/inp.py:494
+#: i18n/po/../../farragone/ui/qt/inp.py:511
 msgid "Case-sensitive"
 msgstr "Case-sensitive"
 
 #. NOTE: sort order
-#: i18n/po/../../farragone/ui/qt/inp.py:498
+#: i18n/po/../../farragone/ui/qt/inp.py:515
 msgid "Ascending"
 msgstr "Ascending"
 
 #. NOTE: default value for the field name for the 'Ordering' field source
-#: i18n/po/../../farragone/ui/qt/inp.py:509
+#: i18n/po/../../farragone/ui/qt/inp.py:526
 msgid "position"
 msgstr "position"
 
 #. NOTE: UI section heading
-#: i18n/po/../../farragone/ui/qt/inp.py:535
+#: i18n/po/../../farragone/ui/qt/inp.py:552
 msgid "Output Template"
 msgstr "Output Template"
 
-#: i18n/po/../../farragone/ui/qt/inp.py:548
+#: i18n/po/../../farragone/ui/qt/inp.py:565
 msgid "Destination path template"
 msgstr "Destination path template"
 
-#: i18n/po/../../farragone/ui/qt/widgets.py:423
+#. NOTE: UI section heading
+#: i18n/po/../../farragone/ui/qt/inp.py:574
+msgid "Working Directory"
+msgstr "Working Directory"
+
+#: i18n/po/../../farragone/ui/qt/widgets.py:434
 msgid ""
 "hacky implementation of 'ask again' found unexpected dialogue layout; "
 "refusing to continue"
@@ -398,9 +403,13 @@ msgstr ""
 "hacky implementation of 'ask again' found unexpected dialogue layout; "
 "refusing to continue"
 
-#: i18n/po/../../farragone/ui/qt/widgets.py:463
+#: i18n/po/../../farragone/ui/qt/widgets.py:474
 msgid "&Don't ask again"
 msgstr "&Don't ask again"
+
+#: i18n/po/../../farragone/ui/qt/widgets.py:524
+msgid "Click to change the selected directory"
+msgstr "Click to change the selected directory"
 
 #: i18n/po/../../farragone/ui/qt/doc.py:1
 msgid ""
@@ -622,6 +631,20 @@ msgstr ""
 #: i18n/po/../../farragone/ui/qt/doc.py:72
 msgid ""
 "\n"
+"<p>The base directory for all relative paths used in the 'Files' and 'Output "
+"Template' sections.  For example, if the working directory is set to <i>/"
+"some/dir</i>, then the path <i>../test.txt</i> means <i>/some/test.txt</i>.</"
+"p>\n"
+msgstr ""
+"\n"
+"<p>The base directory for all relative paths used in the 'Files' and 'Output "
+"Template' sections.  For example, if the working directory is set to <i>/"
+"some/dir</i>, then the path <i>../test.txt</i> means <i>/some/test.txt</i>.</"
+"p>\n"
+
+#: i18n/po/../../farragone/ui/qt/doc.py:77
+msgid ""
+"\n"
 "<p>This view shows rename operations that will happen with the current "
 "settings.  It updates as you make changes, so if it's empty it may be that "
 "none of your file sources match any files.</p>\n"
@@ -637,7 +660,7 @@ msgstr ""
 "<p>The listing is not ordered, and if there are a lot of files to rename, "
 "not all of them are shown.</p>\n"
 
-#: i18n/po/../../farragone/ui/qt/doc.py:78
+#: i18n/po/../../farragone/ui/qt/doc.py:83
 msgid ""
 "\n"
 "<p>This view shows problems with the current settings.  The output updates "
@@ -661,7 +684,7 @@ msgstr ""
 "warnings may not even be included in the total counts given for each warning "
 "type.</p>\n"
 
-#: i18n/po/../../farragone/ui/qt/doc.py:84
+#: i18n/po/../../farragone/ui/qt/doc.py:89
 msgid ""
 "\n"
 "<p>This view shows the names of all fields given by existing field sources.  "
