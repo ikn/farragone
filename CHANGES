@@ -1,4 +1,5 @@
 0.2.2-next:
+ * option to copy files instead of renaming
  * allow specifying files to rename as arguments (equivalent to opening the
    files with the program)
 

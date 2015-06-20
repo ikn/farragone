@@ -291,7 +291,7 @@ Returns the item, as added to `CustomList.items`.
 class FilesSection (CustomList):
     """UI section for selecting input paths.
 
-cwd: CWDSection
+options: OptionsSection
 
 Item states are dicts with 'input' being a `core.inputs.Input`.
 
@@ -301,7 +301,7 @@ Item states are dicts with 'input' being a `core.inputs.Input`.
     name = _('Files')
     doc = doc.files_section
 
-    def __init__ (self, cwd):
+    def __init__ (self, options):
         CustomList.__init__(self, [
             {
                 'id': 'glob',
@@ -332,14 +332,14 @@ Item states are dicts with 'input' being a `core.inputs.Input`.
             }
         ], _('Add a source of files'), _('Remove this source of files'))
 
-        self._cwd = cwd
-        cwd.changed.connect(self.refresh)
+        self._options = options
+        options.changed.connect(self.refresh)
         # if None, should use cwd
         self._last_file_browser_dir_value = None
 
     @property
     def _last_file_browser_dir (self):
-        return (self._cwd.path if self._last_file_browser_dir_value is None
+        return (self._options.cwd if self._last_file_browser_dir_value is None
                 else self._last_file_browser_dir_value)
 
     @_last_file_browser_dir.setter
@@ -403,7 +403,8 @@ Item states are dicts with 'input' being a `core.inputs.Input`.
         }
 
     def _get_glob_state (self, data):
-        inp = core.inputs.GlobInput(data['text_widget'].text(), self._cwd.path)
+        inp = core.inputs.GlobInput(
+            data['text_widget'].text(), self._options.cwd)
         return {'input': inp}
 
     def _new_glob (self, changed):
@@ -417,7 +418,9 @@ Item states are dicts with 'input' being a `core.inputs.Input`.
 
     def _get_recursive_state (self, data):
         path = data['text_widget'].text()
-        return {'input': core.inputs.RecursiveFilesInput(path, self._cwd.path)}
+        return {
+            'input': core.inputs.RecursiveFilesInput(path, self._options.cwd)
+        }
 
     def _new_recursive (self, changed):
         text = qt.QLineEdit()
@@ -609,23 +612,36 @@ template: `string.Template`
         changed_text('')
 
 
-class CWDSection (Changing, qt.QVBoxLayout):
-    """UI section for setting the current working directory."""
+class OptionsSection (Changing, qt.QFormLayout):
+    """UI section for setting options."""
 
     # NOTE: UI section heading
-    name = _('Working Directory')
+    name = _('Options')
 
     def __init__ (self):
-        qt.QVBoxLayout.__init__(self)
+        qt.QFormLayout.__init__(self)
+
         self._cwd = cwd = widgets.DirButton(os.getcwd())
+        self.addRow(_('Working &directory:'), cwd)
         cwd.setWhatsThis(doc.cwd_section)
         cwd.changed.connect(self.changed.emit)
-        self.addWidget(cwd)
+
+        # NOTE: checkbox label for option to copy files instead of renaming
+        self._copy = copy = qt.QCheckBox(_('Copy files'))
+        copy.setToolTip(_('Instead of renaming items, copy them (slower)'))
+        copy.setChecked(False)
+        # NOTE: heading for a set of options
+        self.addRow(_('When running:'), copy)
 
     @property
-    def path (self):
-        """Path to the chosen directory."""
+    def cwd (self):
+        """Path for the current working directory to use for relative paths."""
         return self._cwd.path
+
+    @property
+    def copy (self):
+        """Whether to copy files instead of renaming."""
+        return self._copy.isChecked()
 
 
 class Input (qt.QScrollArea):
@@ -639,7 +655,7 @@ Attributes:
 files: FilesSection
 fields: FieldsSection
 template: TemplateSection
-cwd: CWDSection
+options: OptionsSection
 
 """
 
@@ -649,9 +665,9 @@ cwd: CWDSection
         self.setWidgetResizable(True)
         self.setFrameShape(qt.QFrame.NoFrame)
 
-        self.cwd = CWDSection()
-        self.cwd.changed.connect(changed)
-        self.files = FilesSection(self.cwd)
+        self.options = OptionsSection()
+        self.options.changed.connect(changed)
+        self.files = FilesSection(self.options)
         self.files.new_widget.connect(new_widget)
         self.files.changed.connect(changed)
         self.fields = FieldsSection()
@@ -666,7 +682,7 @@ cwd: CWDSection
         self.add_section(self.files)
         self.add_section(self.fields)
         self.add_section(self.template)
-        self.add_section(self.cwd)
+        self.add_section(self.options)
 
     def add_section (self, section):
         group = qt.QGroupBox(section.name)
@@ -697,11 +713,10 @@ Returns `(inps, fields, template, cwd)`, where:
 inps: sequence of `core.inputs.Input`
 fields: `core.inputs.Fields`
 template: `string.Template` for the output path
-cwd: path for the current working directory to use for relative paths
+options: OptionsSection
 
 """
         inps = [f['state']['input'] for f in self.files.items]
         fields = self.gather_fields()[1]
         template = self.template.template
-        cwd = self.cwd.path
-        return (inps, fields, template, cwd)
+        return (inps, fields, template, self.options)

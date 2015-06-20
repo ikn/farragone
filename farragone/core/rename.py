@@ -104,26 +104,42 @@ Returns a sequence of the paths that were created, deepest first.
     return create
 
 
-def _rename_cross_device (frm, to):
-    """Rename a file across mount points."""
-    is_dir = os.path.isdir(frm) and not os.path.islink(frm)
+def _copy_dir (frm, to, leave_frm=True):
+    """Copy a directory recursively."""
     try:
-        if is_dir:
-            shutil.copytree(frm, to, symlinks=True)
+        shutil.copytree(frm, to, symlinks=True)
+        if not leave_frm:
             shutil.rmtree(frm)
-        else:
-            shutil.copy2(frm, to, follow_symlinks=False)
+    except OSError:
+        # try to clean up
+        try:
+            shutil.rmtree(to)
+        except OSError:
+            pass
+        raise
+
+
+def _copy_file (frm, to, leave_frm=True):
+    """Copy a file."""
+    try:
+        shutil.copy2(frm, to, follow_symlinks=False)
+        if not leave_frm:
             os.remove(frm)
     except OSError:
         # try to clean up
         try:
-            if is_dir:
-                shutil.rmtree(to)
-            else:
-                os.remove(to)
+            os.remove(to)
         except OSError:
             pass
         raise
+
+
+def _copy (frm, to, leave_frm=True):
+    """Copy a file or directory."""
+    if os.path.isdir(frm) and not os.path.islink(frm):
+        _copy_dir(frm, to, leave_frm)
+    else:
+        _copy_file(frm, to, leave_frm)
 
 
 def _rename (frm, to):
@@ -133,16 +149,17 @@ def _rename (frm, to):
     except OSError as e:
         if e.errno == 18:
             # 'invalid cross-device link': copy then delete
-            _rename_cross_device(frm, to)
+            _copy(frm, to, False)
         else:
             raise
 
 
-def rename (frm, to):
+def rename (frm, to, leave_frm=False):
     """Rename a file.
 
 frm: current path
 to: destination path
+leave_frm: whether to leave `frm` as it is (copy)
 
 `frm` and `to` must be absolute, normalised paths.
 
@@ -156,7 +173,10 @@ Raises OSError.
     else:
         created = _ensure_dir_exists(os.path.dirname(to))
         try:
-            _rename(frm, to)
+            if leave_frm:
+                _copy(frm, to, True)
+            else:
+                _rename(frm, to)
         except OSError:
             # remove created directories
             try:

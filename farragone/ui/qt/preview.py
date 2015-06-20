@@ -68,14 +68,14 @@ each checked rename.
 """
         # reset timer for automatic `started` signal
         self._reset_signal()
-        inps, fields, template, cwd = self._inputs.gather()
+        inps, fields, template, options = self._inputs.gather()
         interrupted = False
         sent = 0
         ops = []
         warnings = list(fields.warnings)
 
         renames, done = core.warnings.get_renames_with_warnings(
-            inps, fields, template, cwd)
+            inps, fields, template, options.cwd)
         for (frm, to), new_warnings in renames:
             ops.append((frm, to))
             warnings.extend(new_warnings)

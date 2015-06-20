@@ -39,15 +39,17 @@ inputs: inp.Inputs
 when finished.
 
 """
-        inps, fields, template, cwd = self._inputs.gather()
+        inps, fields, template, options = self._inputs.gather()
         start_op = self.signals.start_op
         end_op = self.signals.end_op
 
-        renames, done = core.rename.get_renames(inps, fields, template, cwd)
+        renames, done = core.rename.get_renames(
+            inps, fields, template, options.cwd)
+        copy = options.copy
         for i, (frm, to) in enumerate(renames):
             start_op.emit(i, frm, to)
             try:
-                core.rename.rename(frm, to)
+                core.rename.rename(frm, to, options.copy)
             except OSError as e:
                 err = util.exc_str(e)
             else:
