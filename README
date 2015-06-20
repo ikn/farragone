@@ -1,4 +1,4 @@
-Farragone 0.2.2.
+Farragone 0.2.2-next.
 
 A batch file renamer for programmers.
 
@@ -49,6 +49,8 @@ installing by
     ./configure
     make inplace
     ./run
+
+In any case, files may be specified as command-line arguments.
 
 For help on using the application, use the 'What's This?' button located at the
 bottom of the main window and then select part of the UI to get documentation

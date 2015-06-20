@@ -5,6 +5,6 @@ Name=Farragone
 GenericName=Batch File Renamer
 Comment=A batch file renamer for programmers
 Icon=farragone
-Exec=farragone
+Exec=farragone %F
 Terminal=false
 Categories=Utility;FileTools;Qt

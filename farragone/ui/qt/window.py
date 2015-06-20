@@ -18,20 +18,31 @@ _lock_messages = {
 
 
 class Window (widgets.Window):
-    """Main application window."""
+    """Main application window.
 
-    def __init__ (self):
+paths: sequence of paths to initialise with
+
+"""
+
+    def __init__ (self, paths):
         widgets.Window.__init__(self, 'main')
         self.setWindowTitle(conf.APPLICATION)
         # reasons for which this window cannot be closed
         self._locked = Counter()
 
         out = None
+        init_changed = False
         def changed ():
-            if out is not None:
+            if out is None:
+                nonlocal init_changed
+                init_changed = True
+            else:
                 out.update()
+
         inputs = inp.Input(self._update_tab_order, changed)
         self.output = out = output.Output(inputs)
+        if init_changed:
+            changed()
 
         runner = run.Run(inputs, out.preview)
         runner.started.connect(lambda: self.lock('run'))
@@ -53,6 +64,8 @@ class Window (widgets.Window):
         layout.addWidget(widgets.widget_from_layout(runner))
 
         self._update_tab_order()
+
+        inputs.files.add_paths(paths)
 
     def _update_tab_order (self):
         widgets.set_tab_order(

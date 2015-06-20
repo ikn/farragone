@@ -5,7 +5,7 @@ import os
 from os.path import join as join_path
 
 IDENTIFIER = 'farragone'
-VERSION = '0.2.2'
+VERSION = '0.2.2-next'
 
 PATH_PKG = os.path.dirname(sys.argv[0])
 PATH_LOCALE = None

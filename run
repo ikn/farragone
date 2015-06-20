@@ -13,4 +13,4 @@ sys.path.append(sysconfig.get_python_lib(prefix = _LIB_PREFIX))
 
 if __name__ == '__main__':
     import farragone.ui.qt as qt
-    qt.init()
+    qt.init(sys.argv[1:])

@@ -1,3 +1,7 @@
+0.2.2-next:
+ * allow specifying files to rename as arguments (equivalent to opening the
+   files with the program)
+
 0.2.2:
  * padding options for the 'ordering' field source
  * allow opening a file dialogue for adding to the 'list' file source

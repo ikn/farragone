@@ -76,8 +76,10 @@ This must be called after creating the Qt application.
             qt.QIcon.setThemeName(fallback_theme)
 
 
-def init ():
+def init (args):
     """Start the Qt UI.
+
+args: command-line arguments (files to initialise with)
 
 Returns when the user quits.
 
@@ -99,6 +101,6 @@ Returns when the user quits.
     # using Qt the interpreter might not run very often, so nothing will happen
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
-    w = window.Window()
+    w = window.Window(args)
     w.show()
     app.exec()

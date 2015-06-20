@@ -16,6 +16,21 @@ from ...core.field import Alignments
 from . import doc, qt, widgets
 
 
+def optimise_paths (cwd, paths):
+    """Make paths relative if it makes them simpler.
+
+cwd: directory relative paths are relative to
+paths: iterable of paths
+
+"""
+    for path in paths:
+        rel = os.path.relpath(path, cwd)
+        # we call a path simpler if it has at least 2 fewer path components
+        # this is just a rough count, no need to be accurate (would involve
+        # os.path.split in a loop)
+        yield rel if path.count(os.sep) - rel.count(os.sep) >= 2 else path
+
+
 class FieldContext (qt.QComboBox):
     """A combo box widget providing a choice of field `Context`."""
 
@@ -156,8 +171,9 @@ Attributes:
 types: {type['id']: type} from `types` argument
 items: sequence of current items, each a dict with keys:
     type: type['id']
-    item: from `create`
     data: from `create`
+    item: from `create`
+    changed: called whenever the item's settings change to update `state`
     state: from `getstate`
 
 """
@@ -190,7 +206,11 @@ items: sequence of current items, each a dict with keys:
         self.items = []
 
     def add (self, item_type):
-        """Add an item of the given type (`id`)."""
+        """Add an item of the given type (`id`).
+
+Returns the item, as added to `CustomList.items`.
+
+"""
         if item_type not in self.types:
             raise ValueError(item_type)
         item = None
@@ -243,7 +263,6 @@ items: sequence of current items, each a dict with keys:
         item = {
             'type': item_type,
             'data': result['data'],
-            'header': header,
             'item': widget,
             'changed': changed
         }
@@ -252,10 +271,11 @@ items: sequence of current items, each a dict with keys:
         self._refresh.connect(changed)
         changed()
         self.new_widget.emit()
+        return item
 
 
     def rm (self, item):
-        """Remove the given item (QWidget)."""
+        """Remove the given item (from `CustomList.items`)."""
         self.items.remove(item)
         self.removeWidget(item['item'])
         item['item'].deleteLater()
@@ -315,27 +335,41 @@ Item states are dicts with 'input' being a `core.inputs.Input`.
         self._cwd = cwd
         cwd.changed.connect(self.refresh)
         # if None, should use cwd
-        self._last_file_browser_dir = None
+        self._last_file_browser_dir_value = None
+
+    @property
+    def _last_file_browser_dir (self):
+        return (self._cwd.path if self._last_file_browser_dir_value is None
+                else self._last_file_browser_dir_value)
+
+    @_last_file_browser_dir.setter
+    def _last_file_browser_dir (self, d):
+        self._last_file_browser_dir_value = d
+
+    # add paths with a new list item
+    def add_paths (self, paths):
+        if paths:
+            item = self.add('list')
+            item['data']['add_paths'](
+                optimise_paths(self._last_file_browser_dir, paths))
 
     def _get_list_state (self, data):
         paths = filter(lambda path: path,
                        data['text_widget'].toPlainText().splitlines())
         return {'input': core.inputs.StaticInput(*paths)}
 
-    # show a file dialogue and append selected files to a file list widget
-    def _list_browse (self, text_widget):
+    # show a file dialogue and pass files to the given function
+    def _list_browse (self, add_paths):
         # can't use a static function since we need the current dir afterwards
-        fd_dir = (self._cwd.path if self._last_file_browser_dir is None
-                  else self._last_file_browser_dir)
+        fd_dir = self._last_file_browser_dir
         fd = qt.QFileDialog(directory=fd_dir)
         fd.setFileMode(qt.QFileDialog.ExistingFiles)
         fd.setOptions(qt.QFileDialog.HideNameFilterDetails)
 
         if fd.exec():
             files = fd.selectedFiles()
+            add_paths(files)
             self._last_file_browser_dir = fd.directory().absolutePath()
-            text_widget.appendPlainText('\n'.join(files) + '\n')
-            text_widget.setFocus(qt.Qt.OtherFocusReason)
 
     def _new_list (self, changed):
         layout = qt.QVBoxLayout()
@@ -350,15 +384,23 @@ Item states are dicts with 'input' being a `core.inputs.Input`.
             pass
         text.textChanged.connect(changed)
 
+        # append given iterable of paths to the list widget
+        def add_paths (paths):
+            text.appendPlainText('\n'.join(paths) + '\n')
+            text.setFocus(qt.Qt.OtherFocusReason)
+
         browse = widgets.mk_button(qt.QPushButton, {
             # NOTE: label for a button that opens a file browser dialogue
             'text': _('Browse...'),
             'icon': 'document-open',
-            'clicked': lambda: self._list_browse(text)
+            'clicked': lambda: self._list_browse(add_paths)
         })
         layout.addWidget(browse)
 
-        return {'data': {'text_widget': text}, 'item': layout}
+        return {
+            'data': {'text_widget': text, 'add_paths': add_paths},
+            'item': layout
+        }
 
     def _get_glob_state (self, data):
         inp = core.inputs.GlobInput(data['text_widget'].text(), self._cwd.path)
@@ -588,6 +630,9 @@ class CWDSection (Changing, qt.QVBoxLayout):
 
 class Input (qt.QScrollArea):
     """Section of the UI with controls for defining the renaming scheme.
+
+new_widget: function to call when widgets are added
+changed: function to call when any settings change
 
 Attributes:
 
