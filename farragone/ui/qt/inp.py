@@ -12,7 +12,7 @@ import locale
 from html import escape
 
 from ... import util, conf, core
-from ...core.field import Alignments
+from ...core.field import Alignments, SortTypes
 from . import doc, qt, widgets
 
 
@@ -537,14 +537,16 @@ Item states are dicts with 'fields' being a `core.field.Fields`.
         }, 'item': layout, 'focus': text}
 
     def _get_ordering_state (self, data):
+        base_key = data['sorttype_widget'].currentData()
         key = (
-            locale.strxfrm
+            base_key
             if data['casesensitive_widget'].isChecked()
-            else lambda s: locale.strxfrm(s.lower())
+            else lambda s: base_key(s.lower())
         )
 
         return {'fields': core.field.Ordering(
-            field_name=data['field_widget'].text(), key=key,
+            field_name=data['field_widget'].text(),
+            key=key,
             reverse=not data['ascending_widget'].isChecked(),
             context=data['context_widget'].context,
             fmt=data['pad'].get_fmt()
@@ -553,12 +555,23 @@ Item states are dicts with 'fields' being a `core.field.Fields`.
     def _new_ordering (self, changed):
         layout = qt.QGridLayout()
 
+        sort_type = qt.QComboBox()
+        widgets.add_combobox_items(sort_type, *(
+            {
+                qt.Qt.UserRole: sort_type,
+                qt.Qt.DisplayRole: sort_type.name,
+                qt.Qt.ToolTipRole: sort_type.desc
+            } for sort_type in core.field.all_sort_types
+        ))
+        sort_type.currentIndexChanged.connect(changed)
+        layout.addWidget(sort_type, 0, 0)
+
         case_sensitive = qt.QCheckBox(_('Case-sensitive'))
-        layout.addWidget(case_sensitive, 0, 0)
+        layout.addWidget(case_sensitive, 0, 1)
         case_sensitive.stateChanged.connect(changed)
         # NOTE: sort order
         ascending = qt.QCheckBox(_('Ascending'))
-        layout.addWidget(ascending, 0, 1)
+        layout.addWidget(ascending, 0, 2)
         ascending.setChecked(True)
         ascending.stateChanged.connect(changed)
 
@@ -566,7 +579,7 @@ Item states are dicts with 'fields' being a `core.field.Fields`.
         layout.addWidget(context, 1, 0, 1, 1)
         context.currentIndexChanged.connect(changed)
         field = qt.QLineEdit()
-        layout.addWidget(field, 1, 1, 1, 1)
+        layout.addWidget(field, 1, 1, 1, 2)
         # NOTE: default value for the field name for the 'Ordering' field source
         field.setText(_('position'))
         field.setPlaceholderText(_('Field name'))
@@ -576,6 +589,7 @@ Item states are dicts with 'fields' being a `core.field.Fields`.
         layout.addLayout(pad, 2, 0, 1, 2)
 
         return {'data': {
+            'sorttype_widget': sort_type,
             'casesensitive_widget': case_sensitive,
             'ascending_widget': ascending,
             'context_widget': context,

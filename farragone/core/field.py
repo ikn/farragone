@@ -24,7 +24,7 @@ fmt: character for use in a string formatting specification
 
 Attributes:
 
-name, fmt: as passed to the contstructor
+name, fmt: as passed to the constructor
 
 """
 
@@ -45,6 +45,64 @@ class Alignments:
 
 # sequence of `Alignment` instances, ordered by importance
 all_alignments = (Alignments.right, Alignments.left, Alignments.centre)
+
+
+_sort_numeric_pattern = re.compile(r'-?\d+(\.\d+)?')
+# key function for 'Numeric' sort type
+def _sort_numeric (s):
+    match = _sort_numeric_pattern.search(s)
+    # no math.inf until 3.5
+    return (float('inf') if match is None
+            else float(match.group(0)))
+
+
+_sort_version_pattern = re.compile(r'\d+(\.\d+)*')
+# key function for 'Version' sort type
+def _sort_version (s):
+    match = _sort_version_pattern.search(s)
+    # no math.inf until 3.5
+    return ((float('inf'),) if match is None
+            else tuple(map(int, match.group(0).split('.'))))
+
+
+class SortType:
+    """Definition of a method of ordering strings.
+
+name: sort type display name
+key: standard 'key function' for sorting
+desc: short description
+
+Maybe be called as a key function.
+
+Attributes:
+
+name, desc: as passed to the constructor
+
+"""
+
+    def __init__ (self, name, key, desc=None):
+        self.name = name
+        self._key = key
+        self.desc = desc
+
+    def __call__ (self, s):
+        return self._key(s)
+
+
+# `SortType` instances enum
+class SortTypes:
+    # NOTE: sort type option
+    alphabetical = SortType(_('Alphabetical'), locale.strxfrm)
+    # NOTE: sort type option
+    numeric = SortType(_('Numeric'), _sort_numeric)
+    # NOTE: sort type option
+    version = SortType(_('Version'), _sort_version,
+                       # NOTE: description for the 'Version' sort type option
+                       _('For example: 0.9 or 3.1.4'))
+
+
+# sequence of `SortType` instances, ordered by importance
+all_sort_types = (SortTypes.alphabetical, SortTypes.numeric, SortTypes.version)
 
 
 class Context:
@@ -462,7 +520,8 @@ class Ordering (ComplexEvalFields):
     """Sort paths and use their position as a field.
 
 field_name: name to give the retrieved field
-key: standard 'key function' for sorting
+key: standard 'key function' for sorting (see `SortTypes` for some
+     implementations)
 reverse: whether to reverse the sort order
 context: `Context` defining which part of the path to pass to `key`
 fmt: function to use to format the ordered index to generate the string field
@@ -476,7 +535,7 @@ key, reverse, context, fmt: as passed to the constructor
 
 """
 
-    def __init__ (self, field_name, key=locale.strxfrm, reverse=False,
+    def __init__ (self, field_name, key=SortTypes.alphabetical, reverse=False,
                   context=Contexts.NAME, fmt=str):
         self._name = field_name
         self.key = key

@@ -54,7 +54,9 @@ fields_regex = _(r'''
 ''')
 
 fields_ordering = _(r'''
-<p>Order all source files alphabetically and use the position in the sorted list as a field.  The dropdown allows choosing which part of the path is used for sorting.  The text entry gives the field name.</p>
+<p>Order all source files alphabetically or numerically and use the position in the sorted list as a field.  The dropdown allows choosing which part of the path is used for sorting.  The text entry gives the field name.</p>
+
+<p>The <i>Numeric</i> and <i>Version</i> ordering methods use the first number or version found in the part of the path being used for sorting.  Paths without a number or version are positioned after those with one.</p>
 ''')
 
 

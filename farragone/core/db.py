@@ -15,7 +15,6 @@ from . import rename
 _tbl = '`temp`'
 
 
-
 def key_to_sqlite_cmp (key):
     """Turn a sorting 'key' function into a sqlite3 collation function."""
 
