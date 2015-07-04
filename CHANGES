@@ -1,4 +1,4 @@
-0.2.2-next:
+0.2.3:
  * choice of ordering types: alphabetical, number, version
  * option to copy files instead of renaming
  * 'auto' padding size option for the 'ordering' field source
