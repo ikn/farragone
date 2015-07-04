@@ -4,6 +4,7 @@
  * 'auto' padding size option for the 'ordering' field source
  * allow specifying files to rename as arguments (equivalent to opening the
    files with the program)
+ * bug: recursive file source doesn't work with a file (only with a directory)
 
 0.2.2:
  * padding options for the 'ordering' field source

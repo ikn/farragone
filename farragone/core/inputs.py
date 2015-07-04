@@ -87,8 +87,11 @@ path: as passed to the constructor
         self.path = os.path.join(cwd, os.path.expanduser(path))
 
     def __iter__ (self):
-        # doesn't throw
-        join = os.path.join
-        for d, dirs, files in os.walk(self.path):
-            for f in files:
-                yield join(d, f)
+        if os.path.isfile(self.path):
+            yield self.path
+        else:
+            join = os.path.join
+            # doesn't throw
+            for d, dirs, files in os.walk(self.path):
+                for f in files:
+                    yield join(d, f)
