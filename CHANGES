@@ -1,6 +1,7 @@
 0.2.2-next:
  * choice of ordering types: alphabetical, number, version
  * option to copy files instead of renaming
+ * 'auto' padding size option for the 'ordering' field source
  * allow specifying files to rename as arguments (equivalent to opening the
    files with the program)
 

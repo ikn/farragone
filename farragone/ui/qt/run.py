@@ -39,7 +39,8 @@ inputs: inp.Inputs
 when finished.
 
 """
-        inps, fields, template, options = self._inputs.gather()
+        inps, field_sets, template, options = self._inputs.gather()
+        fields = core.field.FieldCombination(*field_sets)
         start_op = self.signals.start_op
         end_op = self.signals.end_op
 

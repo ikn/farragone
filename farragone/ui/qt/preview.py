@@ -26,6 +26,8 @@ the UI.
 
 """
 
+    # qt HTML string to display
+    fields = qt.pyqtSignal(str)
     # [(path_from, path_to), ...]
     operation_batch = qt.pyqtSignal(list)
     # [util.Warning, ...]
@@ -41,6 +43,26 @@ the UI.
     def _reset_signal (self):
         # reset the signal timer
         self._last_signal_t = time()
+
+    def _emit_fields (self, field_sets, all_fields):
+        # emit fields signal
+        log('BG fields')
+        lines = []
+        dup_names = all_fields.duplicate_names
+
+        for fields in field_sets:
+            source = str(fields)
+            for name in fields.names:
+                rendered_name = (
+                    '<font color="red">{}</font>' if name in dup_names else '{}'
+                ).format(escape(name))
+                # NOTE: line in the Fields tab; placeholders are the field name
+                # and a description of the field's source
+                lines.append(_(
+                    '{0} <font color="grey">({1})</font>'
+                ).format(rendered_name, source))
+
+        self.fields.emit('<br>'.join(lines))
 
     def _emit_batch (self, ops, warnings):
         # emit operation and warning batch signals
@@ -68,7 +90,9 @@ each checked rename.
 """
         # reset timer for automatic `started` signal
         self._reset_signal()
-        inps, fields, template, options = self._inputs.gather()
+        inps, field_sets, template, options = self._inputs.gather()
+        fields = core.field.FieldCombination(*field_sets)
+        self._emit_fields(field_sets, fields)
         interrupted = False
         sent = 0
         ops = []
@@ -179,42 +203,6 @@ warnings: sequence of warnings, each `(category, detail)` strings
         self.new = False
 
 
-class PreviewFields (widgets.Tab):
-    """Show all specified fields and their sources.
-
-inputs: `inp.Input`
-
-"""
-
-    def __init__ (self, inputs):
-        # NOTE: & marks keyboard accelerator
-        widgets.Tab.__init__(self, _('&Fields'), qt.QTextEdit(),
-                             doc=doc.preview_fields)
-        self.widget.setReadOnly(True)
-        self.widget.setLineWrapMode(qt.QTextEdit.NoWrap)
-        self._inputs = inputs
-
-    def update (self):
-        """Update display from current settings."""
-        lines = []
-        field_sets, all_fields = self._inputs.gather_fields()
-        dup_names = all_fields.duplicate_names
-
-        for fields in field_sets:
-            source = str(fields)
-            for name in fields.names:
-                rendered_name = (
-                    '<font color="red">{}</font>' if name in dup_names else '{}'
-                ).format(escape(name))
-                # NOTE: line in the Fields tab; placeholders are the field name
-                # and a description of the field's source
-                lines.append(_(
-                    '{0} <font color="grey">({1})</font>'
-                ).format(rendered_name, source))
-
-        self.widget.setHtml('<br>'.join(lines))
-
-
 class Preview (sync.UpdateController):
     """Manages preview widgets - renames and warnings.
 
@@ -224,22 +212,32 @@ Attributes:
 
 renames: PreviewRenames
 warnings: PreviewWarnings
-fields: PreviewFields
+fields: widgets.Tab displaying specified fields and their sources
 
 """
 
     def __init__ (self, inputs):
         self.renames = PreviewRenames()
         self.warnings = PreviewWarnings()
-        self.fields = PreviewFields(inputs)
+        # NOTE: & marks keyboard accelerator
+        self.fields = widgets.Tab(_('&Fields'), qt.QTextEdit(),
+                                  doc=doc.preview_fields)
+        self.fields.widget.setReadOnly(True)
+        self.fields.widget.setLineWrapMode(qt.QTextEdit.NoWrap)
 
         def run ():
             self._preview.run()
 
         sync.UpdateController.__init__(self, self._reset, run, 'preview', log)
         self._preview = PreviewThread(inputs, self.thread)
+        self._preview.fields.connect(self._fields_finished)
         self._preview.operation_batch.connect(self._operation_batch_finished)
         self._preview.warning_batch.connect(self._warning_batch_finished)
+
+    def _fields_finished (self, fields_text):
+        # new fields text
+        log('FG fields')
+        self.fields.widget.setHtml(fields_text)
 
     def _operation_batch_finished (self, batch):
         # new results
@@ -258,5 +256,4 @@ fields: PreviewFields
 
     def update (self):
         """Update display from current settings."""
-        self.fields.update()
         sync.UpdateController.update(self)

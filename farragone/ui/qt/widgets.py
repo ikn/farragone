@@ -31,6 +31,24 @@ def first_layout_widget (layout):
         return None
 
 
+def set_text_desc (text_widget, desc):
+    """Set the description for a text-type widget.
+
+text_widget: `QLineEdit` or `QPlainTextEdit`
+desc: string to set as the tooltip and placeholder text
+
+"""
+    text_widget.setToolTip(desc)
+    if isinstance(text_widget, qt.QLineEdit):
+        text_widget.setPlaceholderText(desc)
+    elif isinstance(text_widget, qt.QPlainTextEdit):
+        # QPlainTextEdit.setPlaceholderText is new in Qt 5.3
+        try:
+            text_widget.setPlaceholderText(desc)
+        except AttributeError:
+            pass
+
+
 def setup_button (b, defn):
     """Set properties of a QAbstractButton.
 

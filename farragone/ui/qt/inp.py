@@ -55,6 +55,7 @@ class FieldContext (qt.QComboBox):
 class OrderingPadding (qt.QGridLayout):
     """Layout containing widgets for 'ordering' field padding settings.
 
+files: `FilesSection`
 changed: function to call when any settings change
 
 """
@@ -66,8 +67,9 @@ changed: function to call when any settings change
         Alignments.left: 'format-justify-left'
     }
 
-    def __init__ (self, changed):
+    def __init__ (self, files, changed):
         qt.QGridLayout.__init__(self)
+        self._files = files
         self._options = []
         self._enabled = enabled = qt.QCheckBox(_('Padding'))
         self.addWidget(enabled, 0, 0, 1, 3)
@@ -76,7 +78,7 @@ changed: function to call when any settings change
 
         self._char = char = qt.QLineEdit()
         self._options.append(char)
-        char.setPlaceholderText(_('Padding character'))
+        widgets.set_text_desc(char, _('Padding character'))
         char.setMaxLength(1)
         char.setText('0')
         char.textChanged.connect(changed)
@@ -95,10 +97,12 @@ changed: function to call when any settings change
 
         self._size = size = qt.QSpinBox()
         self._options.append(size)
-        size.setRange(1, 99)
-        size.setValue(3)
+        size.setRange(0, 99)
+        size.setValue(0)
         size.setToolTip(_('Minimum padded size'))
         size.valueChanged.connect(changed)
+        # maps to min value (0, which is also the default)
+        size.setSpecialValueText(_('Auto'))
 
         for i, w in enumerate(self._options):
             self.addWidget(w, 1, i)
@@ -121,9 +125,11 @@ For use as the `fmt` argument to `Ordering`.
 
 """
         if self._is_enabled():
+            size = self._size.value()
+            if size == 0: # auto
+                size = core.field.Ordering.auto_padding_size(self._files.inputs)
             return core.field.Ordering.padding_fmt(
-                self._char.text() or ' ', self._align.currentData(),
-                self._size.value())
+                self._char.text() or ' ', self._align.currentData(), size)
         else:
             return str
 
@@ -160,7 +166,7 @@ types: sequence of definitions of types of items, where the order is preserved
             item: the created item (QWidget or QLayout)
             focus: widget to focus when added (default: `item`)
     getstate: optional function called with `data` returned by `create` which
-               returns a representation of the item's current state
+              returns a representation of the item's current state
 add_tooltip: tooltip for the button to add an item
 rm_tooltip: tooltip for the button to remove an item
 
@@ -174,7 +180,11 @@ items: sequence of current items, each a dict with keys:
     data: from `create`
     item: from `create`
     changed: called whenever the item's settings change to update `state`
-    state: from `getstate`
+    getstate: item_type's `getstate`
+    state: from `getstate`, None if no `getstate` (possibly missing, use
+           `CustomList.item_state`)
+    queued: True if the item's state has changed but this is not yet reflected
+            in `state`
 
 """
 
@@ -205,6 +215,20 @@ items: sequence of current items, each a dict with keys:
         self._rm_tooltip = rm_tooltip
         self.items = []
 
+    @staticmethod
+    def item_state (item):
+        """
+TODO
+
+May block for a long time, so shouldn't be called in the UI thread.
+
+"""
+        if item['queued']:
+            get_state = item['getstate']
+            item['state'] = (None if get_state is None
+                             else get_state(item['data']))
+        return item['state']
+
     def add (self, item_type):
         """Add an item of the given type (`id`).
 
@@ -222,9 +246,7 @@ Returns the item, as added to `CustomList.items`.
         })
 
         def changed ():
-            get_state = self.types[item_type].get('getstate')
-            item['state'] = (None if get_state is None
-                             else get_state(item['data']))
+            item['queued'] = True
             self.changed.emit()
 
         defn = self.types[item_type]
@@ -264,7 +286,9 @@ Returns the item, as added to `CustomList.items`.
             'type': item_type,
             'data': result['data'],
             'item': widget,
-            'changed': changed
+            'changed': changed,
+            'getstate': self.types[item_type].get('getstate'),
+            'queued': False
         }
 
         self.items.append(item)
@@ -338,6 +362,11 @@ Item states are dicts with 'input' being a `core.inputs.Input`.
         self._last_file_browser_dir_value = None
 
     @property
+    def inputs (self):
+        """Sequence of `inputs.Input`."""
+        return [CustomList.item_state(f)['input'] for f in self.items]
+
+    @property
     def _last_file_browser_dir (self):
         return (self._options.cwd if self._last_file_browser_dir_value is None
                 else self._last_file_browser_dir_value)
@@ -377,11 +406,7 @@ Item states are dicts with 'input' being a `core.inputs.Input`.
         text = qt.QPlainTextEdit()
         layout.addWidget(text)
         text.setLineWrapMode(qt.QPlainTextEdit.NoWrap)
-        # QPlainTextEdit.setPlaceholderText is new in Qt 5.3
-        try:
-            text.setPlaceholderText(_('List of files, one per line'))
-        except AttributeError:
-            pass
+        widgets.set_text_desc(text, _('List of files, one per line'))
         text.textChanged.connect(changed)
 
         # append given iterable of paths to the list widget
@@ -409,7 +434,7 @@ Item states are dicts with 'input' being a `core.inputs.Input`.
 
     def _new_glob (self, changed):
         text = qt.QLineEdit()
-        text.setPlaceholderText(_('Glob-style pattern'))
+        widgets.set_text_desc(text, _('Glob-style pattern'))
         # NOTE: default value for the 'Pattern' file source; 'ext' means file
         # extension
         text.setText(_('*.ext'))
@@ -424,7 +449,7 @@ Item states are dicts with 'input' being a `core.inputs.Input`.
 
     def _new_recursive (self, changed):
         text = qt.QLineEdit()
-        text.setPlaceholderText(_('Directory path'))
+        widgets.set_text_desc(text, _('Directory path'))
         text.textChanged.connect(changed)
         return {'data': {'text_widget': text}, 'item': text}
 
@@ -434,13 +459,15 @@ class FieldsSection (CustomList):
 
 Item states are dicts with 'fields' being a `core.field.Fields`.
 
+files: `FilesSection`
+
 """
 
     # NOTE: UI section heading
     name = _('Fields')
     doc = doc.fields_section
 
-    def __init__ (self):
+    def __init__ (self, files):
         CustomList.__init__(self, [
             {
                 'id': 'component',
@@ -469,10 +496,12 @@ Item states are dicts with 'fields' being a `core.field.Fields`.
                 'doc': doc.fields_ordering
             }
         ], _('Add a source of fields'), _('Remove this source of fields'))
+        self._files = files
+        files.changed.connect(self.refresh)
 
     def names (self):
         """Get a set of the names of all defined fields."""
-        return set(sum((item['state']['fields'].names
+        return set(sum((CustomList.item_state(item)['fields'].names
                         for item in self.items), []))
 
     def _get_component_state (self, data):
@@ -487,14 +516,14 @@ Item states are dicts with 'fields' being a `core.field.Fields`.
         idx = qt.QLineEdit()
         layout.addWidget(idx)
         idx.setText('-1')
-        idx.setPlaceholderText(_('Path component index'))
+        widgets.set_text_desc(idx, _('Path component index'))
         idx.textChanged.connect(changed)
         field = qt.QLineEdit()
         layout.addWidget(field)
         # NOTE: default value for the field name for the 'Path Component' field
         # source
         field.setText(_('name'))
-        field.setPlaceholderText(_('Field name'))
+        widgets.set_text_desc(field, _('Field name'))
         field.textChanged.connect(changed)
 
         return {'data': {
@@ -527,7 +556,7 @@ Item states are dicts with 'fields' being a `core.field.Fields`.
         # NOTE: default value for the field name for the 'Path Component' field
         # source
         field.setText(_('group'))
-        field.setPlaceholderText(_('Field name'))
+        widgets.set_text_desc(field, _('Field name'))
         field.textChanged.connect(changed)
 
         return {'data': {
@@ -582,10 +611,10 @@ Item states are dicts with 'fields' being a `core.field.Fields`.
         layout.addWidget(field, 1, 1, 1, 2)
         # NOTE: default value for the field name for the 'Ordering' field source
         field.setText(_('position'))
-        field.setPlaceholderText(_('Field name'))
+        widgets.set_text_desc(field, _('Field name'))
         field.textChanged.connect(changed)
 
-        pad = OrderingPadding(changed)
+        pad = OrderingPadding(self._files, changed)
         layout.addLayout(pad, 2, 0, 1, 2)
 
         return {'data': {
@@ -621,7 +650,7 @@ template: `string.Template`
 
         text = qt.QLineEdit()
         self.addWidget(text)
-        text.setPlaceholderText(_('Destination path template'))
+        widgets.set_text_desc(text, _('Destination path template'))
         text.textChanged.connect(changed_text)
         changed_text('')
 
@@ -684,7 +713,7 @@ options: OptionsSection
         self.files = FilesSection(self.options)
         self.files.new_widget.connect(new_widget)
         self.files.changed.connect(changed)
-        self.fields = FieldsSection()
+        self.fields = FieldsSection(self.files)
         self.fields.new_widget.connect(new_widget)
         self.fields.changed.connect(changed)
         self.template = TemplateSection()
@@ -705,32 +734,26 @@ options: OptionsSection
         group.setLayout(section)
         self._layout.addWidget(group)
 
-    def gather_fields (self):
-        """Return data about fields specified.
-
-Returns `(field_sets, all_fields)`, where:
-
-field_sets: sequence of `core.inputs.Fields`
-all_fields: `core.inputs.FieldCombination` containing all fields in `field_sets`
-
-"""
-        field_sets = []
-        for f in self.fields.items:
-            field_sets.append(f['state']['fields'])
-        return (field_sets, core.field.FieldCombination(*field_sets))
-
     def gather (self):
         """Return data defining the renaming scheme.
+
+May block for a long time, so shouldn't be called in the UI thread.
 
 Returns `(inps, fields, template, cwd)`, where:
 
 inps: sequence of `core.inputs.Input`
-fields: `core.inputs.Fields`
+fields: sequence of `core.inputs.Fields`
 template: `string.Template` for the output path
-options: OptionsSection
+options: `OptionsSection`
 
 """
-        inps = [f['state']['input'] for f in self.files.items]
-        fields = self.gather_fields()[1]
-        template = self.template.template
-        return (inps, fields, template, self.options)
+        field_sets = []
+        for f in self.fields.items:
+            field_sets.append(CustomList.item_state(f)['fields'])
+
+        return (
+            self.files.inputs,
+            field_sets,
+            self.template.template,
+            self.options
+        )

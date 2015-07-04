@@ -8,6 +8,7 @@ version."""
 import abc
 import itertools
 from collections import Counter
+import math
 import re
 from os import path as os_path
 import locale
@@ -546,6 +547,20 @@ key, reverse, context, fmt: as passed to the constructor
     def __str__ (self):
         # NOTE: used to refer to a particular field source
         return _('ordering, field name: {}').format(repr(self._name))
+
+    @staticmethod
+    def auto_padding_size (inps):
+        """Determine what the ideal padding size is.
+
+inps: sequence of `inputs.Input`
+
+Returns a number for using as the `size` argument to `padding_fmt`.
+
+"""
+        num = 0
+        for path in itertools.chain.from_iterable(inps):
+            num += 1
+        return 1 if num == 0 else int(math.log10(num) + 1)
 
     @staticmethod
     def padding_fmt (char='0', align=Alignments.right, size=3):
