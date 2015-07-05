@@ -31,6 +31,21 @@ paths: iterable of paths
         yield rel if path.count(os.sep) - rel.count(os.sep) >= 2 else path
 
 
+class Dynamic:
+    """Has a 'new_widget' signal for when a widget is added.
+
+For widgets added outside the initialisation call, anywhere within this widget
+or layout.
+
+"""
+    new_widget = qt.pyqtSignal()
+
+
+class Changing:
+    """Has a 'changed' signal for when user input changes."""
+    changed = qt.pyqtSignal()
+
+
 class FieldContext (qt.QComboBox):
     """A combo box widget providing a choice of field `Context`."""
 
@@ -52,7 +67,7 @@ class FieldContext (qt.QComboBox):
         return self.currentData()
 
 
-class OrderingPadding (qt.QGridLayout):
+class OrderingPadding (Dynamic, qt.QGridLayout):
     """Layout containing widgets for 'ordering' field padding settings.
 
 files: `FilesSection`
@@ -68,6 +83,7 @@ changed: function to call when any settings change
     }
 
     def __init__ (self, files, changed):
+        Dynamic.__init__(self)
         qt.QGridLayout.__init__(self)
         self._files = files
         self._options = []
@@ -117,6 +133,7 @@ changed: function to call when any settings change
         for w in self._options:
             w.setVisible(enabled)
         changed()
+        self.new_widget.emit()
 
     def get_fmt (self):
         """Get a formatting function for the current settings.
@@ -132,21 +149,6 @@ For use as the `fmt` argument to `Ordering`.
                 self._char.text() or ' ', self._align.currentData(), size)
         else:
             return str
-
-
-class Dynamic:
-    """Has a 'new_widget' signal for when a widget is added.
-
-For widgets added outside the initialisation call, anywhere within this widget
-or layout.
-
-"""
-    new_widget = qt.pyqtSignal()
-
-
-class Changing:
-    """Has a 'changed' signal for when user input changes."""
-    changed = qt.pyqtSignal()
 
 
 class CustomList (Dynamic, Changing, qt.QVBoxLayout):
@@ -305,6 +307,7 @@ Returns the item, as added to `CustomList.items`.
         item['item'].deleteLater()
         self._refresh.disconnect(item['changed'])
         self.changed.emit()
+        self.new_widget.emit()
 
 
     def refresh (self):
@@ -615,6 +618,7 @@ files: `FilesSection`
         field.textChanged.connect(changed)
 
         pad = OrderingPadding(self._files, changed)
+        pad.new_widget.connect(self.new_widget.emit)
         layout.addLayout(pad, 2, 0, 1, 2)
 
         return {'data': {

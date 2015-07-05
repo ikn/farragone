@@ -1,3 +1,6 @@
+0.2.3-next:
+ * various improvements to widget tabbing order
+
 0.2.3:
  * choice of ordering types: alphabetical, number, version
  * option to copy files instead of renaming

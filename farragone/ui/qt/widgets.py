@@ -156,8 +156,8 @@ items: any number of dicts defining items, with keys from Qt.ItemDataRole and
 
 
 def _natural_layout_items_order (layout):
-    """Return widgets in a layout in order, or None if of unknown type."""
-    if isinstance(layout, qt.QBoxLayout):
+    """Return layout items in a layout in order, or None if of unknown type."""
+    if isinstance(layout, (qt.QBoxLayout, qt.QFormLayout)):
         return [layout.itemAt(i) for i in range(layout.count())]
 
     elif isinstance(layout, qt.QGridLayout):
@@ -184,6 +184,9 @@ def _natural_widget_widgets_order (widget):
     elif isinstance(widget, qt.QSplitter):
         return [widget.widget(i) for i in range(widget.count())]
 
+    elif isinstance(widget, qt.QTabWidget):
+        return [widget.tabBar(), widget.currentWidget()]
+
     else:
         return None
 
@@ -195,7 +198,7 @@ def natural_widget_order (*widgets):
 widgets: top-most widgets to start with, in the desired order
 
 Returns an iterator over bottom-level widgets, going through known layouts and
-other widget containers.
+other widget containers.  This does not include hidden widgets.
 
 """
     log = _natural_widget_order_log
@@ -218,7 +221,7 @@ other widget containers.
         layout_items = _natural_layout_items_order(layout)
 
         if layout_items is None:
-            if is_widget:
+            if is_widget and not item.isHidden():
                 log('W', item)
                 yield item
         else:
@@ -241,7 +244,10 @@ def set_tab_order (widgets):
 widgets: iterable of widgets
 
 """
-    ws1, ws2 = itertools.tee(widgets, 2)
+    # only include widgets that accept tab focus
+    tabbing_widgets = (w for w in widgets
+                       if w.focusPolicy() & qt.Qt.TabFocus)
+    ws1, ws2 = itertools.tee(tabbing_widgets, 2)
     # offset the second iterator by one
     next(ws2)
     for w1, w2 in zip(ws1, ws2):
