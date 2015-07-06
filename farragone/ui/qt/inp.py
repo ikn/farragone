@@ -202,7 +202,7 @@ items: sequence of current items, each a dict with keys:
         Changing.__init__(self)
         qt.QVBoxLayout.__init__(self)
 
-        new_type = qt.QComboBox()
+        self._new_btn = new_type = qt.QComboBox()
         self.addWidget(new_type)
         # https://bugreports.qt.io/browse/QTBUG-40807
         add_type = lambda i: self.add(new_type.itemData(i))
@@ -313,6 +313,7 @@ Returns the item, as added to `CustomList.items`.
         self._refresh.disconnect(item['changed'])
         self.changed.emit()
         self.new_widget.emit()
+        self._new_btn.setFocus(qt.Qt.OtherFocusReason)
 
 
     def refresh (self):
