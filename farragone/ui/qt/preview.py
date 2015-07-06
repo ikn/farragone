@@ -88,18 +88,32 @@ the UI.
 each checked rename.
 
 """
+
         # reset timer for automatic `started` signal
         self._reset_signal()
-        inps, field_sets, template, options = self._inputs.gather()
+
+        interrupted = False
+        # check if we want to abort; return True if so
+        def interrupt ():
+            nonlocal interrupted
+            if interrupted:
+                # already aborted
+                return True
+            else:
+                i = self.thread.isInterruptionRequested()
+                if i:
+                    interrupted = True
+                return i
+
+        inps, field_sets, template, options = self._inputs.gather(interrupt)
         fields = core.field.FieldCombination(*field_sets)
         self._emit_fields(field_sets, fields)
-        interrupted = False
         sent = 0
         ops = []
         warnings = list(fields.warnings)
 
         renames, done = core.warnings.get_renames_with_warnings(
-            inps, fields, template, options.cwd)
+            inps, fields, template, options.cwd, interrupt)
         for (frm, to), new_warnings in renames:
             ops.append((frm, to))
             warnings.extend(new_warnings)
@@ -108,7 +122,7 @@ each checked rename.
                 sent += len(ops)
                 ops = []
                 warnings = []
-            if self.thread.isInterruptionRequested():
+            if interrupted or self.thread.isInterruptionRequested():
                 # this preview is no longer needed
                 log('BG interrupt')
                 interrupted = True

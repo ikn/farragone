@@ -187,7 +187,8 @@ Raises OSError.
             raise
 
 
-def _get_renames (with_warnings, inps, fields, template, cwd=None):
+def _get_renames (with_warnings, inps, fields, template, cwd=None,
+                  interrupt=None):
     """Like `get_renames`, but possibly including warnings.
 
 with_warnings: whether to compute warnings that can only be determined while
@@ -204,7 +205,7 @@ instances (empty if `with_warnings` is False).
 
     paths = itertools.chain.from_iterable(inps)
     abs_paths = map(lambda path: _get_abs_path(path, cwd), paths)
-    result, state = fields.evaluate(abs_paths)
+    result, state = fields.evaluate(abs_paths, interrupt)
 
     def get ():
         for path, field_vals in result:
@@ -239,6 +240,7 @@ template: `string.Template` instance to generate output paths using retrieved
           fields
 cwd: directory that relative paths are relative to (default: the working
      directory of this process)
+interrupt: abort when this function returns True
 
 Returns `(get, done)`, where:
 

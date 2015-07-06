@@ -135,8 +135,10 @@ changed: function to call when any settings change
         changed()
         self.new_widget.emit()
 
-    def get_fmt (self):
+    def get_fmt (self, interrupt=None):
         """Get a formatting function for the current settings.
+
+interrupt: abort when this function returns True
 
 For use as the `fmt` argument to `Ordering`.
 
@@ -144,7 +146,8 @@ For use as the `fmt` argument to `Ordering`.
         if self._is_enabled():
             size = self._size.value()
             if size == 0: # auto
-                size = core.field.Ordering.auto_padding_size(self._files.inputs)
+                size = core.field.Ordering.auto_padding_size(
+                    self._files.inputs, interrupt)
             return core.field.Ordering.padding_fmt(
                 self._char.text() or ' ', self._align.currentData(), size)
         else:
@@ -167,8 +170,9 @@ types: sequence of definitions of types of items, where the order is preserved
             data: passed to `get_state`
             item: the created item (QWidget or QLayout)
             focus: widget to focus when added (default: `item`)
-    getstate: optional function called with `data` returned by `create` which
-              returns a representation of the item's current state
+    getstate: optional function called with `data` returned by `create`, and a
+              function `interrupt`; returns a representation of the item's
+              current state
 add_tooltip: tooltip for the button to add an item
 rm_tooltip: tooltip for the button to remove an item
 
@@ -218,9 +222,10 @@ items: sequence of current items, each a dict with keys:
         self.items = []
 
     @staticmethod
-    def item_state (item):
-        """
-TODO
+    def item_state (item, interrupt=None):
+        """Get the state of an item, using its type's `getstate` function.
+
+interrupt: abort when this function returns True
 
 May block for a long time, so shouldn't be called in the UI thread.
 
@@ -228,7 +233,7 @@ May block for a long time, so shouldn't be called in the UI thread.
         if item['queued']:
             get_state = item['getstate']
             item['state'] = (None if get_state is None
-                             else get_state(item['data']))
+                             else get_state(item['data'], interrupt))
         return item['state']
 
     def add (self, item_type):
@@ -385,7 +390,7 @@ Item states are dicts with 'input' being a `core.inputs.Input`.
             item['data']['add_paths'](
                 optimise_paths(self._last_file_browser_dir, paths))
 
-    def _get_list_state (self, data):
+    def _get_list_state (self, data, interrupt):
         paths = filter(lambda path: path,
                        data['text_widget'].toPlainText().splitlines())
         return {'input': core.inputs.StaticInput(*paths)}
@@ -430,7 +435,7 @@ Item states are dicts with 'input' being a `core.inputs.Input`.
             'item': layout
         }
 
-    def _get_glob_state (self, data):
+    def _get_glob_state (self, data, interrupt):
         inp = core.inputs.GlobInput(
             data['text_widget'].text(), self._options.cwd)
         return {'input': inp}
@@ -444,7 +449,7 @@ Item states are dicts with 'input' being a `core.inputs.Input`.
         text.textChanged.connect(changed)
         return {'data': {'text_widget': text}, 'item': text}
 
-    def _get_recursive_state (self, data):
+    def _get_recursive_state (self, data, interrupt):
         path = data['text_widget'].text()
         return {
             'input': core.inputs.RecursiveFilesInput(path, self._options.cwd)
@@ -507,7 +512,7 @@ files: `FilesSection`
         return set(sum((CustomList.item_state(item)['fields'].names
                         for item in self.items), []))
 
-    def _get_component_state (self, data):
+    def _get_component_state (self, data, interrupt):
         return {'fields': core.field.PathComponent(
             field_name=data['field_widget'].text(),
             index=data['index_widget'].text()
@@ -534,7 +539,7 @@ files: `FilesSection`
             'field_widget': field
         }, 'item': layout, 'focus': idx}
 
-    def _get_regex_state (self, data):
+    def _get_regex_state (self, data, interrupt):
         return {'fields': core.field.RegexGroups(
             pattern=data['text_widget'].text(),
             field_name_prefix=data['field_widget'].text(),
@@ -568,7 +573,7 @@ files: `FilesSection`
             'field_widget': field
         }, 'item': layout, 'focus': text}
 
-    def _get_ordering_state (self, data):
+    def _get_ordering_state (self, data, interrupt):
         base_key = data['sorttype_widget'].currentData()
         key = (
             base_key
@@ -581,7 +586,7 @@ files: `FilesSection`
             key=key,
             reverse=not data['ascending_widget'].isChecked(),
             context=data['context_widget'].context,
-            fmt=data['pad'].get_fmt()
+            fmt=data['pad'].get_fmt(interrupt)
         )}
 
     def _new_ordering (self, changed):
@@ -738,8 +743,10 @@ options: OptionsSection
         group.setLayout(section)
         self._layout.addWidget(group)
 
-    def gather (self):
+    def gather (self, interrupt=None):
         """Return data defining the renaming scheme.
+
+interrupt: abort when this function returns True
 
 May block for a long time, so shouldn't be called in the UI thread.
 
@@ -753,7 +760,7 @@ options: `OptionsSection`
 """
         field_sets = []
         for f in self.fields.items:
-            field_sets.append(CustomList.item_state(f)['fields'])
+            field_sets.append(CustomList.item_state(f, interrupt)['fields'])
 
         return (
             self.files.inputs,

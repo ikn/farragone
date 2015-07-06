@@ -171,10 +171,11 @@ class Fields (metaclass=abc.ABCMeta):
         return warnings
 
     @abc.abstractmethod
-    def evaluate (self, paths):
+    def evaluate (self, paths, interrupt=None):
         """Retrieve fields from paths.
 
 paths: iterator yielding input paths (absolute and with normalised separators)
+interrupt: abort when this function returns True
 
 Returns an `(results, state)` where:
 
@@ -202,7 +203,7 @@ class SimpleEvalFields (Fields, metaclass=abc.ABCMeta):
         """Return a `dict` of fields for the given path."""
         pass
 
-    def evaluate (self, paths):
+    def evaluate (self, paths, interrupt=None):
         eval_one = self.evaluate_one
         return (((path, eval_one(path)) for path in paths), None)
 
@@ -244,7 +245,7 @@ paths: iterator over source paths.
         return ((store_one(state, path) for path in paths), state)
 
     @abc.abstractmethod
-    def evaluate_stored (self):
+    def evaluate_stored (self, state):
         """Compute fields for all paths passed to `store_one`.
 
 Returns an iterator like `results` returned by `evaluate`, with paths in the
@@ -253,9 +254,9 @@ order passed to `store` (the order of calls to `store_one`).
 """
         pass
 
-    def evaluate (self, paths):
+    def evaluate (self, paths, interrupt=None):
         store_iter, state = self.store(paths)
-        util.consume(store_iter)
+        util.consume(store_iter, interrupt)
         return (self.evaluate_stored(), state)
 
 
@@ -302,7 +303,7 @@ duplicate_names: `set` of field names occuring more than once
         # don't include Fields warnings, since each of field_sets will
         return sum((f.warnings for f in self.field_sets), []) + self._warnings
 
-    def evaluate (self, paths):
+    def evaluate (self, paths, interrupt=None):
         cplx = [fields for fields in self.field_sets
                 if isinstance(fields, ComplexEvalFields)]
         simple = [fields for fields in self.field_sets
@@ -317,7 +318,7 @@ duplicate_names: `set` of field names occuring more than once
                 store_iter, state = fields.store(path_iter)
                 store_iters.append(store_iter)
                 states[fields] = state
-            util.consume(zip(*store_iters))
+            util.consume(zip(*store_iters), interrupt)
 
             first = cplx.pop()
             path_vals = first.evaluate_stored(states[first])
@@ -549,10 +550,11 @@ key, reverse, context, fmt: as passed to the constructor
         return _('ordering, field name: {}').format(repr(self._name))
 
     @staticmethod
-    def auto_padding_size (inps):
+    def auto_padding_size (inps, interrupt=None):
         """Determine what the ideal padding size is.
 
 inps: sequence of `inputs.Input`
+interrupt: abort when this function returns True
 
 Returns a number for using as the `size` argument to `padding_fmt`.
 
@@ -560,6 +562,8 @@ Returns a number for using as the `size` argument to `padding_fmt`.
         num = 0
         for path in itertools.chain.from_iterable(inps):
             num += 1
+            if interrupt is not None and interrupt():
+                return 0
         return 1 if num == 0 else int(math.log10(num) + 1)
 
     @staticmethod

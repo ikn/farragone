@@ -1,5 +1,6 @@
 0.2.3-next:
  * various improvements to widget tabbing order
+ * improve preview refresh time in some cases
 
 0.2.3:
  * choice of ordering types: alphabetical, number, version

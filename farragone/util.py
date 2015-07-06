@@ -62,10 +62,15 @@ name: corresponds to `conf.LOG` keys
     return log
 
 
-def consume (i):
-    """Run through an iterator."""
+def consume (i, interrupt=None):
+    """Run through an iterator.
+
+interrupt: abort when this function returns True
+
+"""
     for x in i:
-        pass
+        if interrupt is not None and interrupt():
+            break
 
 
 def rate_limit (min_interval, f):
