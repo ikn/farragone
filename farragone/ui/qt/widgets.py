@@ -49,6 +49,17 @@ desc: string to set as the tooltip and placeholder text
             pass
 
 
+def sep (orientation):
+    """Create a visual separator widget.
+
+orientation: `QFrame.HLine` or `QFrame.VLine`
+
+"""
+    w = qt.QFrame()
+    w.setFrameStyle(orientation | qt.QFrame.Sunken)
+    return w
+
+
 def setup_button (b, defn):
     """Set properties of a QAbstractButton.
 

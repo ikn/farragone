@@ -33,7 +33,7 @@ log: logging function
         self._log('BG finished')
 
 
-class UpdateController:
+class UpdateController (qt.QObject):
     """Handle updating the result of a computation in another thread.
 
 reset: function to call before updating, to reset any state
@@ -47,11 +47,15 @@ Results of the computation can be obtained by emitting signals in `run`.
 Attributes:
 
 thread: QThread in which `run` is called
+reset, finished: signals for when the thread starts/stops working
 
 """
 
-    def __init__ (self, reset, run, name='worker', log=None):
-        self._reset = reset
+    reset = qt.pyqtSignal()
+    finished = qt.pyqtSignal()
+
+    def __init__ (self, run, name='worker', log=None):
+        qt.QObject.__init__(self)
         self._log = (util.logger('qt.sync.UpdateController')
                      if log is None else log)
         self.thread = _UpdateWorker(run, log)
@@ -68,7 +72,7 @@ thread: QThread in which `run` is called
             return False
         else:
             self._log('FG start')
-            self._reset()
+            self.reset.emit()
             self.thread.start()
             return True
 
@@ -88,6 +92,8 @@ thread: QThread in which `run` is called
             thread.working_lock.lock()
             thread.working = self._start_thread()
             thread.working_lock.unlock()
+        else:
+            self.finished.emit()
 
     def update (self):
         """Re-run the computation.

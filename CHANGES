@@ -1,4 +1,5 @@
 0.2.3-next:
+ * status bar in each output tab
  * various improvements to widget tabbing order
  * improve preview refresh time in some cases
  * focus dropdown to add new items when removing one (files, fields)

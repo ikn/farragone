@@ -10,7 +10,7 @@ from html import escape
 
 from ... import core
 from ... import conf, util
-from . import doc, qt, widgets, sync
+from . import doc, qt, widgets, sync, outpututil
 
 log = util.logger('qt.output:preview')
 
@@ -139,19 +139,27 @@ each checked rename.
         self._reset_signal()
 
 
-class PreviewRenames (widgets.Tab):
+class PreviewRenames (outpututil.Section):
     """Preview for files to be renamed.
 
 Respects conf.MAX_PREVIEW_LENGTH.
+
+Attributes:
+
+num_files: `StatusField` displaying the number of renames processed
 
 """
 
     def __init__ (self):
         # NOTE: & marks keyboard accelerator
-        widgets.Tab.__init__(self, _('&Preview'), qt.QTextEdit(),
-                             doc=doc.preview_renames)
-        self.widget.setReadOnly(True)
-        self.widget.setLineWrapMode(qt.QTextEdit.NoWrap)
+        page = self._page = qt.QTextEdit()
+        outpututil.Section.__init__(self, _('&Preview'), page,
+                                    doc=doc.preview_renames)
+        page.setReadOnly(True)
+        page.setLineWrapMode(qt.QTextEdit.NoWrap)
+        self.num_files = outpututil.num_files_field()
+        self.add_status_field(self.num_files)
+
         self.reset()
 
     def add (self, renames):
@@ -164,37 +172,49 @@ renames: sequence of rename operations, each `(source_path, destination_path)`
         space = conf.MAX_PREVIEW_LENGTH - self._lines
         use = min(space, got)
         if use > 0:
-            self.widget.insertPlainText(
+            self._page.insertPlainText(
                 '\n'.join(core.rename.preview_rename(frm, to)
                 for frm, to in renames[:use]
             ) + '\n')
             self._lines += use
         if got > space and not self._preview_abbreviated:
-            self.widget.insertPlainText('...\n')
+            self._page.insertPlainText('...\n')
             self._lines += 1
             self._preview_abbreviated = True
 
     def reset (self):
         """Prepare for a new preview."""
-        self.widget.setPlainText('')
+        self._page.setPlainText('')
         self._lines = 0
         self._preview_abbreviated = False
+        # status bar
+        self.num_files.update(0)
 
 
-class PreviewWarnings (widgets.Tab):
-    """Show warnings for a previewed renaming process."""
+class PreviewWarnings (outpututil.Section):
+    """Show warnings for a previewed renaming process.
+
+Attributes:
+
+num_files: `StatusField` displaying the number of renames processed
+
+"""
 
     def __init__ (self):
         # NOTE: & marks keyboard accelerator
-        widgets.Tab.__init__(self, _('&Warnings'), qt.QTextEdit(),
-                             icon='dialog-warning', doc=doc.preview_warnings)
-        self.widget.setReadOnly(True)
-        self.widget.setLineWrapMode(qt.QTextEdit.NoWrap)
+        page = self._page = qt.QTextEdit()
+        outpututil.Section.__init__(self, _('&Warnings'), page, icon='dialog-warning',
+                             doc=doc.preview_warnings)
+        page.setReadOnly(True)
+        page.setLineWrapMode(qt.QTextEdit.NoWrap)
+        self.num_files = outpututil.num_files_field()
+        self.add_status_field(self.num_files)
+
         self.reset()
 
     def _update_display (self):
         # update text shown from self.warnings
-        self.widget.setHtml(self.warnings.render('html'))
+        self._page.setHtml(self.warnings.render('html'))
 
     def add (self, warnings):
         """Show some more warnings.
@@ -212,9 +232,32 @@ warnings: sequence of warnings, each `(category, detail)` strings
     def reset (self):
         """Prepare for a new preview."""
         self.warnings = util.Warnings()
-        self.widget.setPlainText('')
+        self._page.setPlainText('')
+        # tab
         self.error = False
         self.new = False
+        # status bar
+        self.num_files.update(0)
+
+
+class FieldsSection (outpututil.Section):
+    """Displays specified fields and their sources."""
+
+    def __init__ (self):
+        page = self._page = qt.QTextEdit()
+        # NOTE: & marks keyboard accelerator
+        outpututil.Section.__init__(self, _('&Fields'), page, doc=doc.preview_fields)
+        page.setReadOnly(True)
+        page.setLineWrapMode(qt.QTextEdit.NoWrap)
+
+    def set_text (self, text):
+        """Display the given rich text, overriding any existing text."""
+        self._page.setHtml(text)
+        self.working = False
+
+    def reset (self):
+        """Prepare for a new preview."""
+        self._page.setPlainText('')
 
 
 class Preview (sync.UpdateController):
@@ -226,47 +269,57 @@ Attributes:
 
 renames: PreviewRenames
 warnings: PreviewWarnings
-fields: widgets.Tab displaying specified fields and their sources
+fields: FieldsSection
 
 """
 
     def __init__ (self, inputs):
         self.renames = PreviewRenames()
         self.warnings = PreviewWarnings()
-        # NOTE: & marks keyboard accelerator
-        self.fields = widgets.Tab(_('&Fields'), qt.QTextEdit(),
-                                  doc=doc.preview_fields)
-        self.fields.widget.setReadOnly(True)
-        self.fields.widget.setLineWrapMode(qt.QTextEdit.NoWrap)
+        self.fields = FieldsSection()
 
         def run ():
             self._preview.run()
 
-        sync.UpdateController.__init__(self, self._reset, run, 'preview', log)
+        sync.UpdateController.__init__(self, run, 'preview', log)
         self._preview = PreviewThread(inputs, self.thread)
         self._preview.fields.connect(self._fields_finished)
         self._preview.operation_batch.connect(self._operation_batch_finished)
         self._preview.warning_batch.connect(self._warning_batch_finished)
+        self.reset.connect(self._on_reset)
+        self.finished.connect(self._on_finished)
+
+        self._num_files = 0
 
     def _fields_finished (self, fields_text):
         # new fields text
         log('FG fields')
-        self.fields.widget.setHtml(fields_text)
+        self.fields.set_text(fields_text)
 
-    def _operation_batch_finished (self, batch):
+    def _operation_batch_finished (self, renames):
         # new results
         log('FG ops batch')
-        self.renames.add(batch)
+        self.renames.add(renames)
+        self._num_files += len(renames)
+        self.renames.num_files.update(self._num_files)
+        self.warnings.num_files.update(self._num_files)
 
     def _warning_batch_finished (self, batch):
         # new warnings
         log('FG warnings batch')
         self.warnings.add(batch)
 
-    def _reset (self):
+    def _on_finished (self):
+        """Preview finished or canceled."""
+        self.renames.working = False
+        self.warnings.working = False
+
+    def _on_reset (self):
         """Prepare for a new preview."""
-        self.renames.reset()
-        self.warnings.reset()
+        self._num_files = 0
+        for section in (self.renames, self.warnings, self.fields):
+            section.working = True
+            section.reset()
 
     def update (self):
         """Update display from current settings."""
