@@ -39,14 +39,15 @@ paths: sequence of paths to initialise with
             else:
                 out.update()
 
-        inputs = inp.Input(self._update_tab_order, changed)
+        self.inputs = inputs = inp.Input(self._update_tab_order, changed)
         self.output = out = output.Output(inputs)
         if init_changed:
             changed()
 
         runner = run.Run(inputs, out.preview)
-        runner.started.connect(lambda: self.lock('run'))
+        runner.started.connect(self._run_started)
         runner.stopped.connect(self._run_stopped)
+        runner.gather_finished.connect(self._run_gather_finished)
 
         layout = qt.QVBoxLayout()
         self.setCentralWidget(widgets.widget_from_layout(layout))
@@ -84,8 +85,17 @@ paths: sequence of paths to initialise with
         # release a close prevention lock
         self._locked[ident] -= 1
 
+    def _run_started (self):
+        self.lock('run')
+        self.inputs.setEnabled(False)
+
+    def _run_gather_finished (self):
+        self.inputs.setEnabled(True)
+
     def _run_stopped (self, started):
         self.release('run')
+        # enable inputs here because gather_finished might not always happen
+        self.inputs.setEnabled(True)
         if started:
             self.output.update()
 

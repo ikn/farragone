@@ -1,6 +1,7 @@
 0.2.3-next:
  * allow pausing and canceling while running
  * status bar in each output tab
+ * when running, disable controls until the required data has been gathered
  * various improvements to widget tabbing order
  * improve preview refresh time in some cases
  * focus dropdown to add new items when removing one (files, fields)

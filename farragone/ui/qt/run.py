@@ -83,6 +83,7 @@ Attributes;
 started: signal emitted when we start renaming
 stopped: signal emitted when we stop renaming; argument indicates whether
          renaming actually started
+gather_finished: signal emitted when we've finished gathering data from `inputs`
 status: QLabel with current status
 state: from RunState
 current_operation: (frm, to) paths for the current rename, or None
@@ -92,6 +93,7 @@ failed: list of error strings for the current/previous run
 
     started = qt.pyqtSignal()
     stopped = qt.pyqtSignal(bool)
+    gather_finished = qt.pyqtSignal()
 
     def __init__ (self, inputs, preview):
         qt.QHBoxLayout.__init__(self)
@@ -151,6 +153,7 @@ failed: list of error strings for the current/previous run
         self.state = RunState.idle
         self._thread = None
         self.current_operation = None
+        self._gather_finished_emitted = False
         self.failed = []
         self.update_status()
 
@@ -230,6 +233,9 @@ frm: source path
 to: destination path
 
 """
+        if not self._gather_finished_emitted:
+            self.gather_finished.emit()
+            self._gather_finished_emitted = True
         self.current_operation = (frm, to)
         self.update_status()
 
@@ -308,6 +314,7 @@ started: whether renaming actually started (a rename could have been performed)
 
         if do_run:
             self._preview.pause()
+            self._gather_finished_emitted = False
             self._thread = RenameThread(self._inputs)
             self.current_operation = None
             self.failed = []
