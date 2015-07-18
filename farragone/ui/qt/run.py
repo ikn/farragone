@@ -197,7 +197,6 @@ abbrev: abbreviated text, without failure reasons
 
         if state == RunState.idle:
             # NOTE: status line
-            self._running_status()
             msg = (_('Idle: {}').format(self._failed_status(abbrev=False))
                    # NOTE: status line
                    if self.failed else _('Idle'))

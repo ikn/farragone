@@ -4,6 +4,6 @@
 
 from distutils.core import setup
 
-setup(name='farragone', version='0.2.3-next', packages=[
+setup(name='farragone', version='0.2.4', packages=[
     'farragone', 'farragone.core', 'farragone.ui', 'farragone.ui.qt'
 ])

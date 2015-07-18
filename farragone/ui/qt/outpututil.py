@@ -45,7 +45,7 @@ The value used for rendering is the number.
 
 """
     # NOTE: display of number of files processed so far in the preview
-    render = lambda num: ngettext(_('{} file'), _('{} files'), num).format(num)
+    render = lambda num: ngettext('{} file', '{} files', num).format(num)
     return StatusField(render, 0)
 
 

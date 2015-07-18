@@ -1,4 +1,4 @@
-0.2.3-next:
+0.2.4:
  * allow pausing and canceling while running
  * status bar in each output tab
  * when running, disable controls until the required data has been gathered
