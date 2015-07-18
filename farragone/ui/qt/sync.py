@@ -144,3 +144,40 @@ callback: called once, when an update has finished (may have already happened),
         # call outside of lock to avoid possible deadlocks
         if do_call:
             callback()
+
+
+class PauseableThread (qt.QThread):
+    """A thread that can be paused and resumed."""
+
+    def __init__ (self):
+        qt.QObject.__init__(self)
+        self._paused = False
+        # whether we've ever waited for an unpause
+        self._init = False
+        # used to wait for unpause
+        self._wait = qt.QWaitCondition()
+        # used with the wait condition
+        self._lock = qt.QMutex()
+
+    def wait_paused (self):
+        if self._paused:
+            # QWaitCondition needs the mutex to be locked - we have to do it
+            # here for the first time because the constructor doesn't run in
+            # this thread
+            if not self._init:
+                self._lock.lock()
+                self._init = True
+            # wait for unpause
+            self._wait.wait(self._lock)
+
+    @property
+    def paused (self):
+        """Whether the thread is paused."""
+        return self._paused
+
+    @paused.setter
+    def paused (self, paused):
+        # set this before waking so that threads never wait after waking
+        self._paused = paused
+        if not paused:
+            self._wait.wakeAll()

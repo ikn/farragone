@@ -9,18 +9,25 @@ version."""
 from html import escape
 
 from ... import core, util
-from . import qt, widgets
+from . import qt, widgets, sync
+
+
+class RunState:
+    """The current state of the renaming process."""
+    idle = 0
+    preparing = 1
+    running = 2
+    paused = 3
 
 
 class RenameThreadSignals (qt.QObject):
     """Signals for RenameThread."""
 
-    loaded = qt.pyqtSignal()
     start_op = qt.pyqtSignal(int, str, str)
     end_op = qt.pyqtSignal(int, bool, str)
 
 
-class RenameThread (qt.QRunnable):
+class RenameThread (sync.PauseableThread):
     """Thread in which we perform the file renaming.
 
 inputs: inp.Inputs
@@ -28,24 +35,27 @@ inputs: inp.Inputs
 """
 
     def __init__ (self, inputs):
-        qt.QRunnable.__init__(self)
+        sync.PauseableThread.__init__(self)
         self._inputs = inputs
         self.signals = RenameThreadSignals()
 
     def run (self):
         """Run rename job.
 
-`start_op` and `end_op` are emitted around each rename, and `loaded` is emitted
-when finished.
+`start_op` and `end_op` are emitted around each rename.
 
 """
-        inps, field_sets, template, options = self._inputs.gather()
+        def interrupted ():
+            self.wait_paused()
+            return self.isInterruptionRequested()
+
+        inps, field_sets, template, options = self._inputs.gather(interrupted)
         fields = core.field.FieldCombination(*field_sets)
         start_op = self.signals.start_op
         end_op = self.signals.end_op
 
         renames, done = core.rename.get_renames(
-            inps, fields, template, options.cwd)
+            inps, fields, template, options.cwd, interrupted)
         copy = options.copy
         for i, (frm, to) in enumerate(renames):
             start_op.emit(i, frm, to)
@@ -56,9 +66,10 @@ when finished.
             else:
                 err = None
             end_op.emit(i, err is not None, err)
-        done()
 
-        self.signals.loaded.emit()
+            if interrupted():
+                break
+        done()
 
 
 class Run (qt.QVBoxLayout):
@@ -73,7 +84,7 @@ started: signal emitted when we start renaming
 stopped: signal emitted when we stop renaming; argument indicates whether
          renaming actually started
 status: QLabel with current status
-running: RenameThread or None
+state: from RunState
 current_operation: (frm, to) paths for the current rename, or None
 failed: list of error strings for the current/previous run
 
@@ -100,36 +111,56 @@ failed: list of error strings for the current/previous run
         self.status = widgets.mk_label('', rich=True)
         self.status.setWordWrap(False)
         status_line.addWidget(self.status, stretch=1)
-        self._preparing_btns = (
-            widgets.mk_button(qt.QPushButton, {
+
+        self._btns = {
+            'skip': widgets.mk_button(qt.QPushButton, {
                 # NOTE: & marks the keyboard accelerator
                 'text': _('&Skip'),
                 'icon': 'media-skip-forward',
                 'clicked': self._continue_run
             }),
-            widgets.mk_button(qt.QPushButton, {
+            'pause': widgets.mk_button(qt.QPushButton, {
+                # NOTE: & marks the keyboard accelerator
+                'text': _('Pa&use'),
+                'icon': 'media-playback-pause',
+                'clicked': self._pause_run
+            }),
+            'resume': widgets.mk_button(qt.QPushButton, {
+                # NOTE: & marks the keyboard accelerator
+                'text': _('&Resume'),
+                'icon': 'media-playback-start',
+                'clicked': self._resume_run
+            }),
+            'cancel': widgets.mk_button(qt.QPushButton, {
                 # NOTE: & marks the keyboard accelerator
                 'text': _('&Cancel'),
                 'icon': 'process-stop',
                 'clicked': self._cancel_run
             })
-        )
-        for b in self._preparing_btns:
+        }
+        # add buttons in a specific order
+        for b in (
+            self._btns['skip'], self._btns['pause'], self._btns['resume'],
+            self._btns['cancel']
+        ):
             status_line.addWidget(b)
 
         self._inputs = inputs
         self._preview = preview
         # not thread-safe, but we only modify it in the main thread
-        # True while waiting for preview, RenameThread while running
-        self.running = None
-        self._can_continue_run = False
-        self._has_run = False
+        self.state = RunState.idle
+        self._thread = None
         self.current_operation = None
         self.failed = []
         self.update_status()
 
-    def _failed_status (self, as_prefix):
-        if as_prefix:
+    def _failed_status (self, abbrev):
+        """Get status text showing failures.
+
+abbrev: abbreviated text, without failure reasons
+
+"""
+        if abbrev:
             failed_msg = ngettext(
                 # NOTE: placeholder is the number of failed operations
                 '{} failed', '{} failed', len(self.failed)
@@ -146,46 +177,50 @@ failed: list of error strings for the current/previous run
     def _op_status (self):
         return escape(core.rename.preview_rename(*self.current_operation))
 
+    def _running_status (self):
+        """Get status text for when running."""
+        msgs = []
+        if self.failed:
+            msgs.append(self._failed_status(abbrev=True))
+        if self.current_operation is not None:
+            msgs.append(self._op_status())
+
+        # NOTE: status text
+        return ' '.join(msgs) if msgs else _('processing...')
+
     def status_text (self):
         """Get Qt rich text giving the current status."""
-        if self.failed:
-            if self.running:
-                if self.current_operation is not None:
-                    text = '{} {}'.format(self._failed_status(as_prefix=True),
-                                          self._op_status())
-                else:
-                    text = self._failed_status(as_prefix=True)
-            else:
-                text = self._failed_status(as_prefix=False)
-        elif self.running:
-            if self.current_operation is not None:
-                text = self._op_status()
-            else:
-                text = _('processing...')
-        else:
-            text = _('success')
+        state = self.state
 
-        # NOTE: status line
-        msg = (_('Running: {}') if self.running
-               # NOTE: status line
-               else _('Finished: {}'))
-        return '<i>{}</i>'.format(msg.format(text))
+        if state == RunState.idle:
+            # NOTE: status line
+            self._running_status()
+            msg = (_('Idle: {}').format(self._failed_status(abbrev=False))
+                   # NOTE: status line
+                   if self.failed else _('Idle'))
+        elif state == RunState.preparing:
+            # NOTE: status line
+            msg = _('Checking for problems...')
+        elif state == RunState.running:
+            msg = _('Running: {}').format(self._running_status())
+        elif state == RunState.paused:
+            # NOTE: status line
+            msg = _('Paused: {}').format(self._running_status())
+
+        return '<i>{}</i>'.format(msg)
 
     def update_status (self):
         """Update display with the current status."""
-        preparing = self.running is True
-        if preparing:
-            self.status.setText('<i>{}</i>'.format(
-                # NOTE: status line
-                _('checking for problems...')))
-        elif self.running or self._has_run:
-            self.status.setText(self.status_text())
-        else:
-            # NOTE: status line
-            self.status.setText('<i>{}</i>'.format(_('idle')))
+        self.status.setText(self.status_text())
 
-        for b in self._preparing_btns:
-            b.show() if preparing else b.hide()
+        state = self.state
+        for b, visible in (
+            (self._btns['skip'], state == RunState.preparing),
+            (self._btns['pause'], state == RunState.running),
+            (self._btns['resume'], state == RunState.paused),
+            (self._btns['cancel'], state != RunState.idle)
+        ):
+            b.show() if visible else b.hide()
 
     def start_op (self, ident, frm, to):
         """Signal that a rename operation has started.
@@ -217,24 +252,44 @@ error: string error message
 started: whether renaming actually started (a rename could have been performed)
 
 """
-        if self.running:
-            self.running = None
-            self._can_continue_run = False
+        if self.state != RunState.idle:
+            self.state = RunState.idle
+            self._thread = None
             self.update_status()
             self._preview.resume()
             self.stopped.emit(started)
             self._run_btn.setEnabled(True)
 
+    def _pause_run (self):
+        """Pause the renaming process if running."""
+        if self.state == RunState.running:
+            self._thread.paused = True
+            self.state = RunState.paused
+            self.update_status()
+
+    def _resume_run (self):
+        """Resume the renaming process if paused."""
+        if self.state == RunState.paused:
+            self._thread.paused = False
+            self.state = RunState.running
+            self.update_status()
+
     def _cancel_run (self):
-        """Cancel run while waiting for a preview."""
-        if self._can_continue_run:
+        """Cancel the renaming process if preparing or running."""
+        state = self.state
+        if state == RunState.preparing:
             self._end(False)
+        elif (state in (RunState.running, RunState.paused) and
+              self._thread is not None):
+            if state == RunState.paused:
+                self._thread.paused = False
+            self._thread.requestInterruption()
 
     def _continue_run (self):
         """Continuation of `run` - called once a preview is ready."""
-        if not self._can_continue_run:
+        if not self.state == RunState.preparing:
             return
-        self._can_continue_run = False
+        self.state = RunState.running
         do_run = True
 
         if self._preview.warnings.warnings:
@@ -253,15 +308,13 @@ started: whether renaming actually started (a rename could have been performed)
 
         if do_run:
             self._preview.pause()
-            self.running = RenameThread(self._inputs)
+            self._thread = RenameThread(self._inputs)
             self.current_operation = None
             self.failed = []
-            self.running.signals.loaded.connect(lambda: self._end(True))
-            self.running.signals.start_op.connect(self.start_op)
-            self.running.signals.end_op.connect(self.end_op)
-
-            qt.QThreadPool.globalInstance().start(self.running)
-            self._has_run = True
+            self._thread.finished.connect(lambda: self._end(True))
+            self._thread.signals.start_op.connect(self.start_op)
+            self._thread.signals.end_op.connect(self.end_op)
+            self._thread.start()
             self.update_status()
 
         else:
@@ -270,9 +323,8 @@ started: whether renaming actually started (a rename could have been performed)
 
     def run (self):
         """Perform the rename operation."""
-        if not self.running:
-            self.running = True
-            self._can_continue_run = True
+        if self.state == RunState.idle:
+            self.state = RunState.preparing
             self._run_btn.setEnabled(False)
             self.started.emit()
             self.update_status()
