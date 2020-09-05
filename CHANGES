@@ -1,3 +1,5 @@
+0.2.4-next:
+
 0.2.4:
  * allow pausing and canceling while running
  * status bar in each output tab

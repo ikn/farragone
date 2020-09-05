@@ -52,7 +52,6 @@ install: $(patsubst %,icons-install-%,$(ICON_DIRS))
 	./setup install --prefix="$(DESTDIR)$(prefix)"
 	@ # readme
 	mkdir -p "$(DESTDIR)$(docdir)/"
-	@ # readme
 	$(INSTALL_DATA) README "$(DESTDIR)$(docdir)/"
 	@ # desktop file
 	mkdir -p "$(DESTDIR)$(datarootdir)/applications"
