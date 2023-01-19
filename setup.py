@@ -5,7 +5,7 @@ with open('README.md', 'r') as f:
 
 setuptools.setup(
     name='farragone',
-    version='0.2.5',
+    version='0.2.6.dev',
     author='Joseph Lansdowne',
     author_email='ikn@ikn.org.uk',
     description='Batch file renamer for programmers',
