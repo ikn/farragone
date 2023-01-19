@@ -1,4 +1,4 @@
-Farragone 0.2.4-next.
+Farragone 0.2.5.
 
 A batch file renamer for programmers.
 
