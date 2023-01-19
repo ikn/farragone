@@ -1,3 +1,5 @@
 /build/
+/dist/
+/farragone.egg-info
 /locale/
 __pycache__/

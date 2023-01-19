@@ -1,9 +1,0 @@
-#! /usr/bin/python
-
-# script for building and installing the Python package
-
-from distutils.core import setup
-
-setup(name='farragone', version='0.2.4-next', packages=[
-    'farragone', 'farragone.core', 'farragone.ui', 'farragone.ui.qt'
-])

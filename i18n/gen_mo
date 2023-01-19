@@ -12,7 +12,7 @@ dest="$1"
 
 po_dir="$(dirname "$0")"/po
 src_dir="$po_dir"/../..
-identifier="$(head -n1 "$src_dir/README")" # "${name} ${version}."
+identifier="$(head -n1 "$src_dir/README.md")" # "${name} ${version}."
 prog="${identifier%% *}"
 ident="$(echo "$prog" | tr "[:upper:]" "[:lower:]")"
 

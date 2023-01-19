@@ -1,14 +1,9 @@
-IDENT := farragone
-INSTALL_PROGRAM := install
-INSTALL_DATA := install -m 644
-
+project_name := farragone
 prefix := /usr/local
 datarootdir := $(prefix)/share
 exec_prefix := $(prefix)
-datadir := $(datarootdir)/$(IDENT)
 bindir := $(exec_prefix)/bin
-docdir := $(datarootdir)/doc/$(IDENT)
-python_lib := $(shell ./get_python_lib "$(DESTDIR)$(prefix)")
+docdir := $(datarootdir)/doc/$(project_name)
 localedir := $(datarootdir)/locale
 local_localedir := ./locale
 
@@ -18,21 +13,23 @@ ICON_DIR_PATH = $(ICON_ROOT)/$(patsubst icons-install-%,%,$@)/apps
 ICON_DIR_PATH_UNINSTALL = $(ICON_ROOT)/$(patsubst icons-uninstall-%,%,$@)/apps
 ICON_PATH_UNINSTALL = $(wildcard $(ICON_DIR_PATH_UNINSTALL)/*)
 
+INSTALL_PROGRAM := install
+INSTALL_DATA := install -m 644
+
 .PHONY: all inplace clean distclean install uninstall
 
 all:
-	./setup build
+	python3 setup.py bdist
 
 inplace:
 	./i18n/gen_mo "$(local_localedir)"
 
 clean:
-	$(RM) -r build
+	$(RM) -r build/ dist/ "$(project_name).egg-info/"
 	$(RM) -r "$(local_localedir)"
 
 distclean: clean
-	@ ./configure reverse
-	find farragone -type d -name '__pycache__' | xargs $(RM) -r
+	find "$(project_name)" -type d -name '__pycache__' | xargs $(RM) -r
 
 icons-install-%:
 	mkdir -p "$(DESTDIR)$(datarootdir)/$(ICON_DIR_PATH)"
@@ -44,31 +41,27 @@ icons-uninstall-%:
 
 install: $(patsubst %,icons-install-%,$(ICON_DIRS))
 	@ # executable
-	./set_prefix "$(prefix)"
-	mkdir -p "$(DESTDIR)$(bindir)"
-	$(INSTALL_PROGRAM) .run.tmp "$(DESTDIR)$(bindir)/$(IDENT)"
-	$(RM) .run.tmp
+	mkdir -p "$(DESTDIR)$(bindir)/"
+	$(INSTALL_PROGRAM) run "$(DESTDIR)$(bindir)/$(project_name)"
 	@ # package
-	./setup install --prefix="$(DESTDIR)$(prefix)"
+	python3 setup.py install --root="$(or $(DESTDIR),/)" --prefix="$(prefix)"
 	@ # readme
 	mkdir -p "$(DESTDIR)$(docdir)/"
-	$(INSTALL_DATA) README "$(DESTDIR)$(docdir)/"
+	$(INSTALL_DATA) README.md "$(DESTDIR)$(docdir)/"
 	@ # desktop file
 	mkdir -p "$(DESTDIR)$(datarootdir)/applications"
-	$(INSTALL_DATA) $(IDENT).desktop "$(DESTDIR)$(datarootdir)/applications"
+	$(INSTALL_DATA) $(project_name).desktop "$(DESTDIR)$(datarootdir)/applications"
 	@ # locale
 	./i18n/gen_mo "$(DESTDIR)$(localedir)"
 
 uninstall: $(patsubst %,icons-uninstall-%,$(ICON_DIRS))
 	@ # executable
-	$(RM) "$(DESTDIR)$(bindir)/$(IDENT)"
-	$(RM) -r "$(DESTDIR)$(datadir)"
+	$(RM) "$(DESTDIR)$(bindir)/$(project_name)"
 	@ # package
-	- ./setup remove --prefix="$(DESTDIR)$(prefix)" &> /dev/null || \
-	    $(RM) -r $(python_lib)/{$(IDENT),$(IDENT)-*.egg-info}
+	./uninstall "$(DESTDIR)" "$(prefix)"
 	@ # readme
 	$(RM) -r "$(DESTDIR)$(docdir)/"
 	@ # desktop file
-	$(RM) "$(DESTDIR)$(datarootdir)/applications/$(IDENT).desktop"
+	$(RM) "$(DESTDIR)$(datarootdir)/applications/$(project_name).desktop"
 	@ # locale
-	$(RM) "$(DESTDIR)$(localedir)"/*/LC_MESSAGES/$(IDENT).mo
+	$(RM) "$(DESTDIR)$(localedir)"/*/LC_MESSAGES/$(project_name).mo

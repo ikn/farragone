@@ -1,4 +1,4 @@
-#! /usr/bin/python
+#! /usr/bin/python3
 
 # This program is free software: you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -6,10 +6,6 @@
 # version.
 
 import sys
-from distutils import sysconfig
-
-_LIB_PREFIX = '/usr/local'
-sys.path.append(sysconfig.get_python_lib(prefix = _LIB_PREFIX))
 
 if __name__ == '__main__':
     import farragone.ui.qt as qt
